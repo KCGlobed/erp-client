@@ -9,7 +9,6 @@ import {
   CalendarDays,
   Wallet,
   Settings,
-  UserPlus,
   FileText,
   LogOut,
   Shield,
