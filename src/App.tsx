@@ -9,6 +9,8 @@ import { LogsPage } from './routes/LogsPage';
 import { CoursesPage } from './routes/CoursesPage';
 import { CohortsPage } from './routes/CohortsPage';
 import { TimetablePage } from './routes/TimetablePage';
+import { DashboardPage } from './routes/DashboardPage';
+import { StudentsPage } from './routes/StudentsPage';
 
 const queryClient = new QueryClient();
 
@@ -20,7 +22,8 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           
           <Route path="/" element={<DashboardLayout />}>
-            <Route index element={<Navigate to="/users" replace />} />
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="roles" element={<RolesPage />} />
             <Route path="permissions" element={<PermissionsPage />} />
@@ -28,6 +31,7 @@ function App() {
             <Route path="courses" element={<CoursesPage />} />
             <Route path="cohorts" element={<CohortsPage />} />
             <Route path="timetable" element={<TimetablePage />} />
+            <Route path="students" element={<StudentsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

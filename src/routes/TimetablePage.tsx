@@ -319,7 +319,7 @@ export function TimetablePage() {
   const selectedCourseId = classForm.courseId;
   const courseCurriculum = courses.find((c) => c.id === selectedCourseId);
   // Flatten subjects from curriculums
-  const availableSubjects = courseCurriculum?.curriculums?.flatMap((curr: any) => curr.subjects) || [];
+  const availableSubjects = courseCurriculum?.curriculums?.flatMap((curr: any) => curr.subjects || []) || [];
 
   return (
     <>

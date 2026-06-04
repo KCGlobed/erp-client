@@ -60,17 +60,15 @@ export function Sidebar({ collapsed }: SidebarProps) {
     {
       label: "Overview",
       items: [
-        { title: "Dashboard", url: "/", icon: LayoutDashboard },
+        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       ],
     },
-    // {
-    //   label: "People",
-    //   items: [
-    //     { title: "Students", url: "/students", icon: GraduationCap },
-    //     { title: "Faculty", url: "/faculty", icon: Users },
-    //     { title: "Admissions", url: "/admissions", icon: UserPlus },
-    //   ],
-    // },
+    {
+      label: "People",
+      items: [
+        { title: "Students", url: "/students", icon: GraduationCap, reqRoles: ['SUPER_ADMIN', 'ADMIN', 'FACULTY'] },
+      ],
+    },
     {
       label: "Academics",
       items: [

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, BookOpen, X } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { Button, cn } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Drawer } from '../components/ui/Drawer';
+import { StudentCard } from '../components/ui/StudentCard';
 
 export function UsersPage() {
   const [page] = useState(1);
@@ -14,7 +15,7 @@ export function UsersPage() {
   const [search, setSearch] = useState('');
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [activeMenuUserId, setActiveMenuUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'permissions' | 'courses' | 'students'>('details');
   
   // Custom confirm popup state
   const [confirmModal, setConfirmModal] = useState<{
@@ -113,6 +114,50 @@ export function UsersPage() {
       method: 'DELETE',
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user-permissions', editingUser?.id] }),
+  });
+
+  // ── Faculty Course Assignment queries ───────────────────────────────────
+  const editingUserIsFaculty = editingUser?.roles?.includes('FACULTY');
+
+  const { data: allCoursesData } = useQuery({
+    queryKey: ['all-courses-for-assignment'],
+    queryFn: () => apiFetch('/courses'),
+    enabled: !!editingUser && editingUserIsFaculty && (isSuperAdmin || isAdmin),
+  });
+
+  const { data: facultyCoursesData, refetch: refetchFacultyCourses } = useQuery({
+    queryKey: ['faculty-courses', editingUser?.id],
+    queryFn: () => apiFetch(`/faculty-assignments/${editingUser.id}/courses`),
+    enabled: !!editingUser?.id && editingUserIsFaculty && (isSuperAdmin || isAdmin),
+  });
+
+  const { data: facultyStudentsData } = useQuery({
+    queryKey: ['faculty-students', editingUser?.id],
+    queryFn: () => apiFetch(`/faculty-assignments/${editingUser.id}/students`),
+    enabled: !!editingUser?.id && editingUserIsFaculty && (isSuperAdmin || isAdmin),
+  });
+
+  // Local state for searching/filtering students in the tab
+  const [studentSearch, setStudentSearch] = useState('');
+
+  const assignCourseMutation = useMutation({
+    mutationFn: ({ userId, courseId }: any) =>
+      apiFetch('/faculty-assignments', {
+        method: 'POST',
+        body: JSON.stringify({ userId, courseId }),
+      }),
+    onSuccess: () => refetchFacultyCourses(),
+    onError: (err: any) => alert(err.message || 'Failed to assign course'),
+  });
+
+  const unassignCourseMutation = useMutation({
+    mutationFn: ({ userId, courseId }: any) =>
+      apiFetch('/faculty-assignments', {
+        method: 'DELETE',
+        body: JSON.stringify({ userId, courseId }),
+      }),
+    onSuccess: () => refetchFacultyCourses(),
+    onError: (err: any) => alert(err.message || 'Failed to unassign course'),
   });
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -293,25 +338,43 @@ export function UsersPage() {
 
       <Drawer
         isOpen={isDrawerOpen}
-        onClose={() => { setIsDrawerOpen(false); setFormError(''); setEditingUser(null); }}
+        onClose={() => { setIsDrawerOpen(false); setFormError(''); setEditingUser(null); setActiveTab('details'); setStudentSearch(''); }}
         title={editingUser ? "Edit User" : "Create New User"}
         description={editingUser ? "Modify user details below." : "Fill in the details below to add a new system user."}
       >
         <div className="space-y-4 pt-2">
-          {editingUser && isSuperAdmin && (
-            <div className="flex gap-4 border-b border-border pb-2">
+          {editingUser && (isSuperAdmin || isAdmin) && (
+            <div className="flex flex-wrap gap-4 border-b border-border pb-2">
               <button
                 className={cn("text-sm font-medium pb-2 -mb-[9px] transition-colors", activeTab === 'details' ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
                 onClick={() => setActiveTab('details')}
               >
                 Profile Details
               </button>
-              <button
-                className={cn("text-sm font-medium pb-2 -mb-[9px] transition-colors", activeTab === 'permissions' ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
-                onClick={() => setActiveTab('permissions')}
-              >
-                Direct Permissions
-              </button>
+              {isSuperAdmin && (
+                <button
+                  className={cn("text-sm font-medium pb-2 -mb-[9px] transition-colors", activeTab === 'permissions' ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
+                  onClick={() => setActiveTab('permissions')}
+                >
+                  Direct Permissions
+                </button>
+              )}
+              {editingUserIsFaculty && (
+                <button
+                  className={cn("text-sm font-medium pb-2 -mb-[9px] transition-colors", activeTab === 'courses' ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
+                  onClick={() => setActiveTab('courses')}
+                >
+                  Course Assignments
+                </button>
+              )}
+              {editingUserIsFaculty && (
+                <button
+                  className={cn("text-sm font-medium pb-2 -mb-[9px] transition-colors", activeTab === 'students' ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
+                  onClick={() => setActiveTab('students')}
+                >
+                  Students
+                </button>
+              )}
             </div>
           )}
 
@@ -376,6 +439,130 @@ export function UsersPage() {
                     </label>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'courses' && editingUserIsFaculty && editingUser && (
+            <div className="space-y-4 pt-2">
+              <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                Assign courses to <strong>{editingUser.firstName} {editingUser.lastName}</strong>. Faculty can only see their assigned courses.
+              </p>
+
+              {/* Currently Assigned */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted-foreground)' }}>Assigned Courses</h3>
+                <div className="space-y-1.5">
+                  {(facultyCoursesData || []).length === 0 ? (
+                    <p className="text-sm py-3 text-center rounded-lg" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>No courses assigned yet.</p>
+                  ) : (
+                    (facultyCoursesData || []).map((c: any) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between rounded-lg px-3 py-2"
+                        style={{ background: 'var(--muted)' }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--primary)' }} />
+                          <div>
+                            <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{c.name}</p>
+                            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{c.code}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => unassignCourseMutation.mutate({ userId: editingUser.id, courseId: c.id })}
+                          disabled={unassignCourseMutation.isPending}
+                          className="flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-destructive/10 cursor-pointer"
+                          style={{ color: 'var(--muted-foreground)' }}
+                          title="Remove assignment"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Add Course */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted-foreground)' }}>Add Course</h3>
+                <div className="space-y-1.5">
+                  {(allCoursesData || [])
+                    .filter((c: any) => !(facultyCoursesData || []).find((a: any) => a.id === c.id))
+                    .map((c: any) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between rounded-lg px-3 py-2"
+                        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+                      >
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{c.name}</p>
+                          <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{c.code}</p>
+                        </div>
+                        <button
+                          onClick={() => assignCourseMutation.mutate({ userId: editingUser.id, courseId: c.id })}
+                          disabled={assignCourseMutation.isPending}
+                          className="flex h-7 items-center gap-1 px-2 rounded-md text-xs font-medium transition-colors cursor-pointer"
+                          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                        >
+                          <Plus className="h-3 w-3" /> Assign
+                        </button>
+                      </div>
+                    ))}
+                  {(allCoursesData || []).filter((c: any) => !(facultyCoursesData || []).find((a: any) => a.id === c.id)).length === 0 && (
+                    <p className="text-sm py-3 text-center rounded-lg" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>All courses are already assigned.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'students' && editingUserIsFaculty && editingUser && (
+            <div className="space-y-4 pt-2">
+              <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                Students enrolled in courses assigned to <strong>{editingUser.firstName} {editingUser.lastName}</strong>.
+              </p>
+
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--muted-foreground)' }} />
+                <input
+                  type="text"
+                  placeholder="Search students..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className="w-full h-9 pl-9 pr-4 rounded-md text-sm outline-none transition-colors border"
+                  style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                />
+              </div>
+
+              <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                {(() => {
+                  const studentsList: any[] = facultyStudentsData?.data || [];
+                  const filteredStudents = studentsList.filter((s: any) =>
+                    `${s.firstName} ${s.lastName} ${s.email}`.toLowerCase().includes(studentSearch.toLowerCase())
+                  );
+
+                  if (studentsList.length === 0) {
+                    return (
+                      <p className="text-sm py-8 text-center rounded-lg" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                        No students enrolled in this faculty's courses.
+                      </p>
+                    );
+                  }
+
+                  if (filteredStudents.length === 0) {
+                    return (
+                      <p className="text-sm py-8 text-center rounded-lg" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                        No matching students found.
+                      </p>
+                    );
+                  }
+
+                  return filteredStudents.map((student: any) => (
+                    <StudentCard key={student.id} student={student} compact />
+                  ));
+                })()}
               </div>
             </div>
           )}
