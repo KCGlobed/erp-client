@@ -1,6 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal, BookOpen, X } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  MoreHorizontal, 
+  BookOpen, 
+  X,
+  CalendarDays,
+  CheckCircle2,
+  XCircle,
+  History,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Mail,
+  Phone,
+  MapPin,
+  GraduationCap
+} from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
@@ -8,6 +25,31 @@ import { Button, cn } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Drawer } from '../components/ui/Drawer';
 import { StudentCard } from '../components/ui/StudentCard';
+import { Modal } from '../components/ui/Modal';
+import { format } from 'date-fns';
+import { Calendar } from '../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/Card';
+import { CalendarIcon } from 'lucide-react';
+
+// Mock enrichment data structures to align both pages perfectly
+const MOCK_PROGRAMS = [
+  'B.Tech CSE - Year 2nd - Sec A',
+  'B.Sc Physics - Year 1st - Sec B',
+  'MBA - Year 1st - Sec A',
+  'B.Com (H) - Year 3rd - Sec C'
+];
+const MOCK_PHONES = [
+  '+91 98201 23456',
+  '+91 99876 11220',
+  '+91 90123 55780',
+  '+91 98450 67891'
+];
+const MOCK_CITIES = ['Mumbai', 'Pune', 'Delhi', 'Kochi', 'Bangalore', 'Chennai'];
+const MOCK_GUARDIANS = ['Rajeev Mehta', 'Sunita Verma', 'Vikram Khanna', 'Anand Pillai', 'Sanjay Joshi', 'Lata Reddy'];
+const MOCK_STATUSES = ['Active', 'Active', 'Active', 'On Leave', 'Graduated', 'Active'];
 
 export function UsersPage() {
   const [page] = useState(1);
@@ -139,6 +181,144 @@ export function UsersPage() {
 
   // Local state for searching/filtering students in the tab
   const [studentSearch, setStudentSearch] = useState('');
+
+  // --- Attendance States for Faculty Drawer Students Tab ---
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [attendance, setAttendance] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(new Date());
+  
+  // History Calendar Modal state
+  const [historyModalStudent, setHistoryModalStudent] = useState<any | null>(null);
+  const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
+
+  // Formatting utility for selectedDate button label
+  const formattedDateLabel = useMemo(() => {
+    if (!selectedDate) return '';
+    const dateObj = new Date(selectedDate);
+    return dateObj.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }, [selectedDate]);
+
+  const pickerDays = useMemo(() => {
+    const year = pickerMonth.getFullYear();
+    const month = pickerMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null);
+    }
+    for (let day = 1; day <= totalDays; day++) {
+      days.push(new Date(year, month, day));
+    }
+    return days;
+  }, [pickerMonth]);
+
+  const calendarDays = useMemo(() => {
+    const year = currentCalendarMonth.getFullYear();
+    const month = currentCalendarMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null);
+    }
+    for (let day = 1; day <= totalDays; day++) {
+      days.push(new Date(year, month, day));
+    }
+    return days;
+  }, [currentCalendarMonth]);
+
+  const handleMonthChange = (direction: 'prev' | 'next') => {
+    setCurrentCalendarMonth(prev => {
+      const nextMonth = new Date(prev);
+      nextMonth.setMonth(prev.getMonth() + (direction === 'prev' ? -1 : 1));
+      return nextMonth;
+    });
+  };
+
+  // Mock enrichment logic to match the main page exactly
+  const enrichedStudentsList = useMemo(() => {
+    const list = facultyStudentsData?.data || [];
+    return list.map((s: any, idx: number) => {
+      const pIdx = idx % MOCK_PROGRAMS.length;
+      const phoneIdx = idx % MOCK_PHONES.length;
+      const cityIdx = idx % MOCK_CITIES.length;
+      const guardianIdx = idx % MOCK_GUARDIANS.length;
+      const statusIdx = idx % MOCK_STATUSES.length;
+
+      const seqNum = String(idx + 1).padStart(3, '0');
+      const mockStudentId = `STU-2024-${seqNum}`;
+
+      return {
+        ...s,
+        studentId: mockStudentId,
+        program: MOCK_PROGRAMS[pIdx],
+        phone: MOCK_PHONES[phoneIdx],
+        city: MOCK_CITIES[cityIdx],
+        guardian: MOCK_GUARDIANS[guardianIdx],
+        status: MOCK_STATUSES[statusIdx],
+      };
+    });
+  }, [facultyStudentsData]);
+
+  // Seeding local mock history
+  useMemo(() => {
+    if (enrichedStudentsList.length > 0 && Object.keys(attendance).length === 0) {
+      const initial: Record<string, 'PRESENT' | 'ABSENT'> = {};
+      const today = new Date();
+      enrichedStudentsList.forEach((student: any) => {
+        for (let d = 0; d < 30; d++) {
+          const date = new Date();
+          date.setDate(today.getDate() - d);
+          const dateStr = date.toISOString().split('T')[0];
+          if (date.getDay() === 0 || date.getDay() === 6) continue;
+          initial[`${student.id}_${dateStr}`] = Math.random() > 0.15 ? 'PRESENT' : 'ABSENT';
+        }
+      });
+      setAttendance(initial);
+    }
+  }, [enrichedStudentsList]);
+
+  // Handle single attendance toggle
+  const markAttendance = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
+    const key = `${studentId}_${selectedDate}`;
+    setAttendance(prev => ({
+      ...prev,
+      [key]: prev[key] === status ? undefined : status as any
+    }));
+  };
+
+  // Mark all present
+  const handleMarkAllPresent = () => {
+    setAttendance(prev => {
+      const updated = { ...prev };
+      enrichedStudentsList.forEach((student) => {
+        updated[`${student.id}_${selectedDate}`] = 'PRESENT';
+      });
+      return updated;
+    });
+  };
+
+  // Stats
+  const stats = useMemo(() => {
+    let presentCount = 0;
+    let absentCount = 0;
+    enrichedStudentsList.forEach((s) => {
+      const status = attendance[`${s.id}_${selectedDate}`];
+      if (status === 'PRESENT') presentCount++;
+      if (status === 'ABSENT') absentCount++;
+    });
+    return { presentCount, absentCount };
+  }, [enrichedStudentsList, attendance, selectedDate]);
 
   const assignCourseMutation = useMutation({
     mutationFn: ({ userId, courseId }: any) =>
@@ -520,30 +700,76 @@ export function UsersPage() {
 
           {activeTab === 'students' && editingUserIsFaculty && editingUser && (
             <div className="space-y-4 pt-2">
-              <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-                Students enrolled in courses assigned to <strong>{editingUser.firstName} {editingUser.lastName}</strong>.
-              </p>
+              {/* Attendance Control Bar */}
+              <Card className="border-border/60 mb-6 overflow-hidden mt-4">
+                <div className="h-1 w-full" style={{ background: 'linear-gradient(135deg, hsl(267, 55%, 52%), hsl(307, 60%, 62%))' }} />
+                <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                      <ClipboardCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">Attendance for</div>
+                      <div className="text-xs text-muted-foreground">Pick a date and mark each student</div>
+                    </div>
+                  </div>
 
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="lg:ml-4 justify-start font-normal">
+                        <CalendarIcon className="h-4 w-4 mr-2 text-primary" />
+                        {format(new Date(selectedDate), "EEEE, MMM d, yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(selectedDate)}
+                        onSelect={(d) => d && setSelectedDate(format(d, 'yyyy-MM-dd'))}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  <div className="flex items-center gap-2 lg:ml-auto">
+                    <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5">
+                      <CheckCircle2 className="h-3 w-3 mr-1" /> Present {stats.presentCount}
+                    </Badge>
+                    <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/5">
+                      <XCircle className="h-3 w-3 mr-1" /> Absent {stats.absentCount}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      onClick={handleMarkAllPresent}
+                    >
+                      Mark all present
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Search */}
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--muted-foreground)' }} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search students..."
                   value={studentSearch}
                   onChange={(e) => setStudentSearch(e.target.value)}
-                  className="w-full h-9 pl-9 pr-4 rounded-md text-sm outline-none transition-colors border"
-                  style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                  className="w-full h-8.5 pl-9 pr-4 rounded-md text-xs outline-none transition-colors border"
+                  style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 />
               </div>
 
+              {/* Scrollable grid container */}
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
                 {(() => {
-                  const studentsList: any[] = facultyStudentsData?.data || [];
-                  const filteredStudents = studentsList.filter((s: any) =>
-                    `${s.firstName} ${s.lastName} ${s.email}`.toLowerCase().includes(studentSearch.toLowerCase())
+                  const filteredStudents = enrichedStudentsList.filter((s: any) =>
+                    `${s.firstName} ${s.lastName} ${s.email} ${s.studentId} ${s.program}`.toLowerCase().includes(studentSearch.toLowerCase())
                   );
 
-                  if (studentsList.length === 0) {
+                  if (enrichedStudentsList.length === 0) {
                     return (
                       <p className="text-sm py-8 text-center rounded-lg" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
                         No students enrolled in this faculty's courses.
@@ -559,9 +785,24 @@ export function UsersPage() {
                     );
                   }
 
-                  return filteredStudents.map((student: any) => (
-                    <StudentCard key={student.id} student={student} compact />
-                  ));
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 mt-4">
+                      {filteredStudents.map((student: any) => (
+                        <StudentCard
+                          key={student.id}
+                          student={student}
+                          attendanceMark={attendance[`${student.id}_${selectedDate}`]}
+                          attendanceDate={selectedDate}
+                          onMarkPresent={() => markAttendance(student.id, 'PRESENT')}
+                          onMarkAbsent={() => markAttendance(student.id, 'ABSENT')}
+                          onOpenHistory={() => {
+                            setHistoryModalStudent(student);
+                            setCurrentCalendarMonth(new Date());
+                          }}
+                        />
+                      ))}
+                    </div>
+                  );
                 })()}
               </div>
             </div>
@@ -592,6 +833,51 @@ export function UsersPage() {
           </div>
         </div>
       )}
+
+      {/* History Calendar Dialog */}
+      <Dialog open={!!historyModalStudent} onOpenChange={(open) => !open && setHistoryModalStudent(null)}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>{historyModalStudent?.firstName} {historyModalStudent?.lastName} · Attendance history</DialogTitle>
+            <DialogDescription>{historyModalStudent?.studentId} · {historyModalStudent?.program}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto divide-y">
+            {(() => {
+              if (!historyModalStudent) return null;
+              const studentHistory = Object.keys(attendance)
+                .filter(k => k.startsWith(`${historyModalStudent.id}_`))
+                .map(k => [k.split('_')[1], attendance[k]])
+                .sort((a, b) => (a[0] < b[0] ? 1 : -1));
+
+              if (studentHistory.length === 0) {
+                return (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    No attendance marked yet.
+                  </p>
+                );
+              }
+
+              return studentHistory.map(([date, value]) => (
+                <div key={date as string} className="flex items-center justify-between py-3">
+                  <div className="text-sm font-medium">
+                    {format(new Date(date as string), "EEE, MMM d, yyyy")}
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={
+                      value === "PRESENT"
+                        ? "border-primary/30 text-primary bg-primary/5"
+                        : "border-destructive/30 text-destructive bg-destructive/5"
+                    }
+                  >
+                    {value === "PRESENT" ? "Present" : "Absent"}
+                  </Badge>
+                </div>
+              ));
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

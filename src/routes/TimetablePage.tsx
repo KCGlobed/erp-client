@@ -278,8 +278,8 @@ export function TimetablePage() {
 
   const isSameDay = (d1: Date, d2: Date) => {
     return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
   };
 
   const isDateBetween = (date: Date, start: Date, end: Date) => {
@@ -320,7 +320,47 @@ export function TimetablePage() {
   const courseCurriculum = courses.find((c) => c.id === selectedCourseId);
   // Flatten subjects from curriculums
   const availableSubjects = courseCurriculum?.curriculums?.flatMap((curr: any) => curr.subjects || []) || [];
+  const calendarEvents = [
+    ...(calendarData.classes || []).map(
+      (item: any) => ({
+        id: item.id,
+        title: item.subject?.name,
+        date: new Date(item.date),
+        type: 'class',
+        data: item,
+      })
+    ),
 
+    ...(calendarData.holidays || []).map(
+      (item: any) => ({
+        id: item.id,
+        title: item.name,
+        date: new Date(item.startDate),
+        type: 'holiday',
+        data: item,
+      })
+    ),
+
+    ...(calendarData.events || []).map(
+      (item: any) => ({
+        id: item.id,
+        title: item.title,
+        date: new Date(item.startDate),
+        type: 'event',
+        data: item,
+      })
+    ),
+
+    ...(calendarData.exams || []).map(
+      (item: any) => ({
+        id: item.id,
+        title: item.subject?.name,
+        date: new Date(item.date),
+        type: 'exam',
+        data: item,
+      })
+    ),
+  ];
   return (
     <>
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-6">
@@ -404,14 +444,12 @@ export function TimetablePage() {
               <div
                 key={day.toISOString()}
                 onClick={() => handleDayClick(day)}
-                className={`p-2 hover:bg-gray-50/80 transition-colors flex flex-col justify-between cursor-pointer min-h-[90px] ${
-                  isToday ? 'bg-amber-50/30' : ''
-                }`}
+                className={`p-2 hover:bg-gray-50/80 transition-colors flex flex-col justify-between cursor-pointer min-h-[90px] ${isToday ? 'bg-amber-50/30' : ''
+                  }`}
               >
                 <div className="flex justify-between items-center">
-                  <span className={`text-xs font-bold ${
-                    isToday ? 'bg-[var(--primary)] text-[var(--primary-foreground)] w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-700'
-                  }`}>
+                  <span className={`text-xs font-bold ${isToday ? 'bg-[var(--primary)] text-[var(--primary-foreground)] w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-700'
+                    }`}>
                     {day.getDate()}
                   </span>
                 </div>
@@ -536,11 +574,10 @@ export function TimetablePage() {
                   setSchedulerTab(tab);
                   setErrorMessage(null);
                 }}
-                className={`py-2 px-3 border-b-2 font-medium capitalize transition-colors cursor-pointer ${
-                  schedulerTab === tab
+                className={`py-2 px-3 border-b-2 font-medium capitalize transition-colors cursor-pointer ${schedulerTab === tab
                     ? 'border-[var(--primary)] text-[var(--primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 {tab}
               </button>

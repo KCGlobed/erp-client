@@ -1,25 +1,21 @@
-import React from 'react';
-import { Mail, Phone, GraduationCap, MapPin, Users } from 'lucide-react';
-import { cn } from './Button';
+import { Mail, Phone, GraduationCap, MapPin, CheckCircle2, XCircle } from 'lucide-react';
+import { format } from 'date-fns';
 
-// Deterministic hue from a string (for avatar colour variety)
-function hueFromString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash) % 360;
+function cn(...classes: (string | undefined | false | null)[]) {
+  return classes.filter(Boolean).join(' ');
 }
 
 export interface StudentCardStudent {
   id: string;
+  studentId: string;
   firstName: string;
   lastName: string;
   email: string;
   status?: string;
-  // Optional extended fields — show "—" when absent
   phone?: string;
   program?: string;
+  year?: string;
+  section?: string;
   city?: string;
   guardian?: string;
   cohortName?: string;
@@ -27,98 +23,154 @@ export interface StudentCardStudent {
 
 interface StudentCardProps {
   student: StudentCardStudent;
-  /** compact removes the banner height and some padding for use inside drawers */
-  compact?: boolean;
+  attendanceMark?: 'PRESENT' | 'ABSENT' | null;
+  attendanceDate?: string | Date;
+  onMarkPresent?: () => void;
+  onMarkAbsent?: () => void;
+  onOpenHistory?: () => void;
   className?: string;
 }
 
-function StatusBadge({ status }: { status?: string }) {
-  const s = (status ?? 'ACTIVE').toUpperCase();
-  const isActive = s === 'ACTIVE';
-  return (
-    <span
-      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wide"
-      style={{
-        background: isActive ? 'oklch(0.36 0.18 330 / 0.1)' : 'oklch(0.5 0.04 330 / 0.12)',
-        color: isActive ? 'var(--primary)' : 'var(--muted-foreground)',
-        border: isActive ? '1px solid oklch(0.36 0.18 330 / 0.25)' : '1px solid var(--border)',
-      }}
-    >
-      {isActive ? 'Active' : s === 'INACTIVE' ? 'Inactive' : s}
-    </span>
-  );
-}
-
-export function StudentCard({ student, compact = false, className }: StudentCardProps) {
+export function StudentCard({
+  student,
+  attendanceMark,
+  attendanceDate,
+  onMarkPresent,
+  onMarkAbsent,
+  onOpenHistory,
+  className,
+}: StudentCardProps) {
   const fullName = `${student.firstName} ${student.lastName}`;
-  const initials = `${student.firstName[0] ?? ''}${student.lastName[0] ?? ''}`.toUpperCase();
-  const hue = hueFromString(student.id);
-  const avatarBg = `hsl(${hue}, 55%, 58%)`;
+  const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.firstName}_${student.lastName}`;
+  const status = student.status || 'Active';
 
-  const row = (icon: React.ReactNode, value?: string) => (
-    <div className="flex items-center gap-2">
-      <span style={{ color: 'var(--primary)' }} className="shrink-0">{icon}</span>
-      <span
-        className="text-xs truncate"
-        style={{ color: value ? 'var(--muted-foreground)' : 'var(--border)' }}
-      >
-        {value || '—'}
-      </span>
-    </div>
-  );
+  const programLabel = [
+    student.program || student.cohortName,
+    student.year,
+    student.section,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div
       className={cn(
-        'rounded-xl overflow-hidden flex flex-col transition-shadow duration-200 hover:shadow-md',
-        className,
+        'bg-white rounded-xl border border-gray-200 p-5 flex flex-col hover:shadow-md transition-all duration-300',
+        className
       )}
-      style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
     >
-      {/* Banner */}
-      {!compact && (
-        <div
-          className="h-14 w-full shrink-0"
-          style={{
-            background: `linear-gradient(135deg, hsl(${hue}, 55%, 52%), hsl(${(hue + 40) % 360}, 60%, 62%))`,
-          }}
+      {/* Top row: avatar + badges */}
+      <div className="flex justify-between items-start mb-4">
+        <img
+          src={avatar}
+          alt={fullName}
+          className="h-16 w-16 rounded-xl object-cover bg-gray-100 border border-gray-200"
         />
-      )}
-
-      <div className={cn('px-4 pb-4', compact ? 'pt-4' : '-mt-7')}>
-        <div className="flex items-end justify-between mb-2">
-          {/* Avatar */}
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow"
-            style={{
-              background: avatarBg,
-              border: compact ? 'none' : '3px solid var(--card)',
-            }}
+        <div className="flex flex-col items-end gap-1.5">
+          {/* Status badge */}
+          <span
+            className={cn(
+              'text-[10px] font-bold px-2 py-0.5 rounded-full border',
+              status === 'Active'
+                ? 'bg-pink-50 text-pink-800 border-pink-100'
+                : status === 'On Leave'
+                  ? 'bg-amber-50 text-amber-800 border-amber-100'
+                  : 'bg-gray-100 text-gray-600 border-gray-200'
+            )}
           >
-            {initials}
-          </div>
-          <StatusBadge status={student.status} />
-        </div>
+            {status}
+          </span>
 
-        {/* Name + ID */}
-        <div className="mt-1">
-          <h3 className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--foreground)' }}>
-            {fullName}
-          </h3>
-          <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-            {student.id.slice(0, 20)}
-          </p>
-        </div>
-
-        {/* Detail rows */}
-        <div className="mt-3 space-y-1.5">
-          {row(<GraduationCap className="h-3 w-3" />, student.program || student.cohortName)}
-          {row(<Mail className="h-3 w-3" />, student.email)}
-          {row(<Phone className="h-3 w-3" />, student.phone)}
-          {row(<MapPin className="h-3 w-3" />, student.city)}
-          {student.guardian && row(<Users className="h-3 w-3" />, `Guardian: ${student.guardian}`)}
+          {/* Attendance badge */}
+          {attendanceMark && attendanceDate && (
+            <span
+              className={cn(
+                'text-[10px] font-bold px-2 py-0.5 rounded-full border',
+                attendanceMark === 'PRESENT'
+                  ? 'bg-violet-50 text-violet-800 border-violet-100'
+                  : 'bg-red-50 text-red-800 border-red-100'
+              )}
+            >
+              {attendanceMark === 'PRESENT' ? 'Present' : 'Absent'} ·{' '}
+              {format(new Date(attendanceDate), 'MMM d')}
+            </span>
+          )}
         </div>
       </div>
+
+      {/* Name + ID */}
+      <div className="mb-4">
+        <h3 className="font-bold text-gray-900 text-[15px] leading-tight">
+          {fullName}
+        </h3>
+        <p className="text-[11px] font-mono text-gray-500 mt-0.5">
+          {student.studentId || student.id.slice(0, 10)}
+        </p>
+      </div>
+
+      {/* Info rows */}
+      <div className="space-y-2 text-[11px] text-gray-500 mb-6 flex-grow">
+        <div className="flex items-start gap-2">
+          <GraduationCap className="h-3.5 w-3.5 text-violet-700 shrink-0 mt-0.5" />
+          <span className="leading-tight">{programLabel || '—'}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Phone className="h-3.5 w-3.5 text-violet-700 shrink-0" />
+          <span className="truncate">{student.phone || '—'}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Mail className="h-3.5 w-3.5 text-violet-700 shrink-0" />
+          <span className="truncate">{student.email || '—'}</span>
+        </div>
+        <div className="flex items-start gap-2">
+          <MapPin className="h-3.5 w-3.5 text-violet-700 shrink-0 mt-0.5" />
+          <span className="leading-tight">
+            {student.city || '—'} · Guardian: {student.guardian || '—'}
+          </span>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      {(onMarkPresent || onMarkAbsent || onOpenHistory) && (
+        <div className="pt-3 border-t border-gray-100 flex items-center gap-1.5 mt-auto">
+          {onMarkPresent && (
+            <button
+              onClick={onMarkPresent}
+              className={cn(
+                'flex-1 h-8 px-2 rounded-lg text-[11px] font-semibold border flex items-center justify-center gap-1 transition-all cursor-pointer',
+                attendanceMark === 'PRESENT'
+                  ? 'bg-violet-900 text-white border-violet-900 hover:bg-violet-950'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              )}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Present
+            </button>
+          )}
+          {onMarkAbsent && (
+            <button
+              onClick={onMarkAbsent}
+              className={cn(
+                'flex-1 h-8 px-2 rounded-lg text-[11px] font-semibold border flex items-center justify-center gap-1 transition-all cursor-pointer',
+                attendanceMark === 'ABSENT'
+                  ? 'bg-red-600 text-white border-red-600 hover:bg-red-700'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              )}
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              Absent
+            </button>
+          )}
+          {onOpenHistory && (
+            <button
+              onClick={onOpenHistory}
+              className="text-[11px] font-semibold text-gray-500 hover:text-gray-900 px-3 h-8 border border-transparent hover:bg-gray-50 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            >
+              History
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

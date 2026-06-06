@@ -1,518 +1,357 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  Search, 
-  GraduationCap, 
-  CalendarDays, 
-  CheckCircle2, 
-  XCircle, 
-  History,
-  Download,
+import { format } from 'date-fns';
+import {
   Plus,
+  Search,
+  Download,
   Mail,
   Phone,
   MapPin,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck
+  GraduationCap,
+  CalendarIcon,
+  CheckCircle2,
+  XCircle,
+  ClipboardCheck,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
-import { Modal } from '../components/ui/Modal';
-import { Button } from '../components/ui/Button';
+import { Card, CardContent } from '../components/ui/Card';
+import { Badge } from '../components/ui/badge';
+import { Calendar } from '../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { cn } from '../components/ui/Button';
 
-// Mock programs, phones, cities, and guardians to match the reference image style
-const MOCK_PROGRAMS = [
-  'B.Tech CSE - Year 2nd - Sec A',
-  'B.Sc Physics - Year 1st - Sec B',
-  'MBA - Year 1st - Sec A',
-  'B.Com (H) - Year 3rd - Sec C'
-];
+// ─── Mock enrichment data ────────────────────────────────────────────────────
+const MOCK_PROGRAMS = ['B.Tech CSE', 'B.Sc Physics', 'MBA', 'B.Com (H)', 'B.Tech ECE', 'B.A English'];
+const MOCK_YEARS    = ['1st', '2nd', '3rd', '4th'];
+const MOCK_SECTIONS = ['A', 'B', 'C'];
+const MOCK_PHONES   = ['+91 98201 23456', '+91 99876 11220', '+91 90123 55780', '+91 98450 67891', '+91 99100 22334', '+91 97045 66012'];
+const MOCK_CITIES   = ['Mumbai', 'Pune', 'Delhi', 'Kochi', 'Chandigarh', 'Bengaluru'];
+const MOCK_GUARDIANS = ['Rajeev Mehta', 'Sunita Verma', 'Vikram Khanna', 'Anand Pillai', 'Manjit Singh', 'Lakshmi Reddy'];
+const MOCK_STATUSES: ('Active' | 'On Leave' | 'Graduated')[] = ['Active', 'Active', 'Active', 'On Leave', 'Graduated', 'Active'];
+// Pravatar images so the card avatars look identical to the inspiration
+const MOCK_AVATARS  = [12, 47, 33, 45, 15, 48, 8, 49, 11, 20, 25, 3, 7, 22, 27];
 
-const MOCK_PHONES = [
-  '+91 98201 23456',
-  '+91 99876 11220',
-  '+91 90123 55780',
-  '+91 98450 67891'
-];
-
-const MOCK_CITIES = ['Mumbai', 'Pune', 'Delhi', 'Kochi', 'Bangalore', 'Chennai'];
-const MOCK_GUARDIANS = ['Rajeev Mehta', 'Sunita Verma', 'Vikram Khanna', 'Anand Pillai', 'Sanjay Joshi', 'Lata Reddy'];
-const MOCK_STATUSES = ['Active', 'Active', 'Active', 'On Leave', 'Graduated', 'Active'];
+type AttendanceMap = Record<string, Record<string, 'present' | 'absent'>>;
 
 export function StudentsPage() {
   const { user } = useAuthStore();
-  const [search, setSearch] = useState('');
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
-
-  // State to hold attendance mapping: { [studentId_dateString]: 'PRESENT' | 'ABSENT' }
-  const [attendance, setAttendance] = useState<Record<string, 'PRESENT' | 'ABSENT'>>(() => {
-    // Generate some mock history for the last 30 days
-    const initial: Record<string, 'PRESENT' | 'ABSENT'> = {};
-    const today = new Date();
-    // We will populate this as students load, or just keep a base map.
-    return initial;
-  });
-
-  // Modal / History Calendar states
-  const [historyModalStudent, setHistoryModalStudent] = useState<any | null>(null);
-  const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
+  const [query, setQuery]       = useState('');
+  const [attendance, setAttendance] = useState<AttendanceMap>({});
+  const [attDate, setAttDate]   = useState<Date>(new Date());
+  const [attOpen, setAttOpen]   = useState(false);
+  const [attStudent, setAttStudent] = useState<any | null>(null);
 
   const isFaculty = user?.roles?.includes('FACULTY');
-  const isAdmin = user?.roles?.some(r => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+  const isAdmin   = user?.roles?.some(r => ['ADMIN', 'SUPER_ADMIN'].includes(r));
 
-  // Query to fetch students
+  // ── Fetch students ──────────────────────────────────────────────────────────
   const { data: students = [], isLoading } = useQuery<any[]>({
     queryKey: ['students-list', user?.id],
     queryFn: async () => {
-      let list = [];
+      let list: any[] = [];
       if (isFaculty) {
         const res = await apiFetch('/faculty-assignments/my-students');
         list = res || [];
       } else {
         const res = await apiFetch('/users?limit=100');
-        const dataList = res?.data || [];
-        list = dataList.filter((u: any) => u.roles?.includes('STUDENT'));
+        list = (res?.data || []).filter((u: any) => u.roles?.includes('STUDENT'));
       }
 
-      // Enrich list with deterministic mock details to mimic the user's design image
-      return list.map((s: any, idx: number) => {
-        const pIdx = idx % MOCK_PROGRAMS.length;
-        const phoneIdx = idx % MOCK_PHONES.length;
-        const cityIdx = idx % MOCK_CITIES.length;
-        const guardianIdx = idx % MOCK_GUARDIANS.length;
-        const statusIdx = idx % MOCK_STATUSES.length;
-
-        // Deterministic mock student ID like STU-2024-001
-        const seqNum = String(idx + 1).padStart(3, '0');
-        const mockStudentId = `STU-2024-${seqNum}`;
-
-        return {
-          ...s,
-          studentId: mockStudentId,
-          program: MOCK_PROGRAMS[pIdx],
-          phone: MOCK_PHONES[phoneIdx],
-          city: MOCK_CITIES[cityIdx],
-          guardian: MOCK_GUARDIANS[guardianIdx],
-          status: MOCK_STATUSES[statusIdx],
-        };
-      });
+      return list.map((s: any, idx: number) => ({
+        ...s,
+        name:     `${s.firstName} ${s.lastName}`,
+        studentId: `STU-2024-${String(idx + 1).padStart(3, '0')}`,
+        program:   MOCK_PROGRAMS[idx % MOCK_PROGRAMS.length],
+        year:      MOCK_YEARS[idx % MOCK_YEARS.length],
+        section:   MOCK_SECTIONS[idx % MOCK_SECTIONS.length],
+        phone:     MOCK_PHONES[idx % MOCK_PHONES.length],
+        city:      MOCK_CITIES[idx % MOCK_CITIES.length],
+        guardian:  MOCK_GUARDIANS[idx % MOCK_GUARDIANS.length],
+        status:    MOCK_STATUSES[idx % MOCK_STATUSES.length],
+        avatar:    `https://i.pravatar.cc/200?img=${MOCK_AVATARS[idx % MOCK_AVATARS.length]}`,
+      }));
     },
   });
 
-  // Generate some automatic random history if we have students and attendance is empty
-  useMemo(() => {
-    if (students.length > 0 && Object.keys(attendance).length === 0) {
-      const initial: Record<string, 'PRESENT' | 'ABSENT'> = {};
-      const today = new Date();
-      // Generate last 30 days of data
-      students.forEach((student: any) => {
-        for (let d = 0; d < 30; d++) {
-          const date = new Date();
-          date.setDate(today.getDate() - d);
-          const dateStr = date.toISOString().split('T')[0];
-          // Skip weekends
-          if (date.getDay() === 0 || date.getDay() === 6) continue;
-          
-          // 85% attendance rate
-          initial[`${student.id}_${dateStr}`] = Math.random() > 0.15 ? 'PRESENT' : 'ABSENT';
-        }
-      });
-      setAttendance(initial);
-    }
-  }, [students]);
+  // ── Derived state ───────────────────────────────────────────────────────────
+  const filtered = useMemo(
+    () =>
+      students.filter(
+        (s) =>
+          s.name.toLowerCase().includes(query.toLowerCase()) ||
+          s.email.toLowerCase().includes(query.toLowerCase()) ||
+          s.studentId.toLowerCase().includes(query.toLowerCase()) ||
+          s.program.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [students, query],
+  );
 
-  // Handle single attendance toggle
-  const markAttendance = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
-    const key = `${studentId}_${selectedDate}`;
-    setAttendance(prev => ({
+  const dateKey = format(attDate, 'yyyy-MM-dd');
+  const getMark = (studentId: string) => attendance[studentId]?.[dateKey];
+  const setMark = (studentId: string, value: 'present' | 'absent') => {
+    setAttendance((prev) => ({
       ...prev,
-      [key]: prev[key] === status ? undefined : status as any // toggle off if clicked again
+      [studentId]: { ...(prev[studentId] || {}), [dateKey]: value },
     }));
   };
 
-  // Mark all present
-  const handleMarkAllPresent = () => {
-    setAttendance(prev => {
-      const updated = { ...prev };
-      filteredStudents.forEach((student) => {
-        updated[`${student.id}_${selectedDate}`] = 'PRESENT';
-      });
-      return updated;
-    });
-  };
+  const presentCount = filtered.filter((s) => getMark(s.studentId) === 'present').length;
+  const absentCount  = filtered.filter((s) => getMark(s.studentId) === 'absent').length;
 
-  // Filter students based on search
-  const filteredStudents = students.filter((s: any) =>
-    `${s.firstName} ${s.lastName} ${s.email} ${s.studentId} ${s.program}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const openAttendanceFor = (s: any) => { setAttStudent(s); setAttOpen(true); };
 
-  // Compute stats for current selected date
-  const stats = useMemo(() => {
-    let presentCount = 0;
-    let absentCount = 0;
-
-    filteredStudents.forEach((s) => {
-      const status = attendance[`${s.id}_${selectedDate}`];
-      if (status === 'PRESENT') presentCount++;
-      if (status === 'ABSENT') absentCount++;
-    });
-
-    return { presentCount, absentCount };
-  }, [filteredStudents, attendance, selectedDate]);
-
-  // Formatting utility for selectedDate button label
-  const formattedDateLabel = useMemo(() => {
-    if (!selectedDate) return '';
-    const dateObj = new Date(selectedDate);
-    return dateObj.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  }, [selectedDate]);
-
-  // Calendar rendering helper logic
-  const calendarDays = useMemo(() => {
-    const year = currentCalendarMonth.getFullYear();
-    const month = currentCalendarMonth.getMonth();
-
-    const firstDayIndex = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-
-    const days = [];
-    // Add empty spaces for offset
-    for (let i = 0; i < firstDayIndex; i++) {
-      days.push(null);
-    }
-    // Add days of the month
-    for (let day = 1; day <= totalDays; day++) {
-      days.push(new Date(year, month, day));
-    }
-    return days;
-  }, [currentCalendarMonth]);
-
-  const handleMonthChange = (direction: 'prev' | 'next') => {
-    setCurrentCalendarMonth(prev => {
-      const nextMonth = new Date(prev);
-      nextMonth.setMonth(prev.getMonth() + (direction === 'prev' ? -1 : 1));
-      return nextMonth;
-    });
-  };
+  const studentHistory = attStudent
+    ? Object.entries(attendance[attStudent.studentId] || {}).sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    : [];
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <>
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
-          <nav className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+          <nav className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <span>Home</span><span className="mx-1">›</span>
             <span>People</span><span className="mx-1">›</span>
-            <span style={{ color: 'var(--foreground)', fontWeight: 500 }}>Students</span>
+            <span className="font-medium text-foreground">Students</span>
           </nav>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--foreground)' }}>
-            Students
-          </h1>
-          <p className="text-sm text-gray-500">
-            Browse student profiles and mark attendance for any date.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">Students</h1>
+          <p className="text-sm text-muted-foreground">Browse student profiles and mark attendance for any date.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="flex items-center gap-1.5 text-xs h-9">
-            <Download className="h-3.5 w-3.5" /> Export
-          </Button>
+          <button className="inline-flex items-center gap-2 px-3 h-9 text-sm font-medium rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer">
+            <Download className="h-4 w-4" /> Export
+          </button>
           {isAdmin && (
-            <Button className="flex items-center gap-1.5 text-xs h-9 bg-purple-800 hover:bg-purple-900 text-white border-0">
-              <Plus className="h-3.5 w-3.5" /> Add Student
-            </Button>
+            <button className="inline-flex items-center gap-2 px-3 h-9 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer">
+              <Plus className="h-4 w-4" /> Add Student
+            </button>
           )}
         </div>
       </div>
 
-      {/* Attendance Control Bar */}
-      <div 
-        className="rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border"
-        style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-pink-50 text-purple-700">
-            <ClipboardCheck className="h-5 w-5" />
+      {/* ── Attendance toolbar ───────────────────────────────────────────── */}
+      <Card className="border-border/60 mb-6 overflow-hidden">
+        <div className="h-1 w-full" style={{ background: 'var(--gradient-primary, linear-gradient(135deg,hsl(267,55%,52%),hsl(307,60%,62%)))' }} />
+        <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <ClipboardCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold">Attendance for</div>
+              <div className="text-xs text-muted-foreground">Pick a date and mark each student</div>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Attendance for</p>
-            <p className="text-xs text-gray-500">Pick a date and mark each student</p>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="lg:ml-4 inline-flex items-center gap-2 px-3 h-9 text-sm font-medium rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer">
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                {format(attDate, 'EEEE, MMM d, yyyy')}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={attDate}
+                onSelect={(d) => d && setAttDate(d)}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+
+          <div className="flex items-center gap-2 lg:ml-auto">
+            <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5">
+              <CheckCircle2 className="h-3 w-3 mr-1" /> Present {presentCount}
+            </Badge>
+            <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/5">
+              <XCircle className="h-3 w-3 mr-1" /> Absent {absentCount}
+            </Badge>
+            <button
+              onClick={() => {
+                const updates: AttendanceMap = { ...attendance };
+                filtered.forEach((s) => {
+                  updates[s.studentId] = { ...(updates[s.studentId] || {}), [dateKey]: 'present' };
+                });
+                setAttendance(updates);
+              }}
+              className="inline-flex items-center gap-2 px-3 h-8 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              Mark all present
+            </button>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Date Selector input/wrapper */}
-        <div className="relative">
-          <label className="flex items-center gap-2 cursor-pointer border rounded-lg px-3 py-2 text-sm bg-white hover:bg-gray-50 transition-colors">
-            <CalendarDays className="h-4 w-4 text-purple-700" />
-            <span className="font-medium text-gray-800">{formattedDateLabel}</span>
-            <input 
-              type="date" 
-              value={selectedDate} 
-              onChange={(e) => setSelectedDate(e.target.value)} 
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            />
-          </label>
-        </div>
-
-        {/* Attendance Stats & Bulk action */}
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full text-purple-700 bg-purple-50">
-            Present {stats.presentCount}
-          </span>
-          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full text-red-700 bg-red-50">
-            Absent {stats.absentCount}
-          </span>
-          <Button 
-            onClick={handleMarkAllPresent}
-            className="text-xs h-9 bg-purple-800 hover:bg-purple-900 text-white border-0"
-          >
-            Mark all present
-          </Button>
-        </div>
-      </div>
-
-      {/* Search Input */}
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      {/* ── Search ──────────────────────────────────────────────────────── */}
+      <div className="relative mb-4 max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <input
-          type="text"
-          placeholder="Search students by name, email, ID or program..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-10 pl-10 pr-4 rounded-lg text-sm outline-none transition-colors border"
-          style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+          placeholder="Search students by name, email, ID or program…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full h-10 pl-9 pr-4 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
         />
       </div>
 
-      {/* Student Cards Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-xl h-56" style={{ background: 'var(--muted)' }} />
-          ))}
-        </div>
-      ) : filteredStudents.length === 0 ? (
-        <div className="rounded-xl p-12 text-center border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-          <p className="text-sm text-gray-500">
-            {students.length === 0 ? 'No students found.' : 'No matching students found.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredStudents.map((student) => {
-            const attStatus = attendance[`${student.id}_${selectedDate}`];
-            const isPresent = attStatus === 'PRESENT';
-            const isAbsent = attStatus === 'ABSENT';
-
-            // Distinct badge colors matching the image
-            let badgeStyle = { bg: 'bg-purple-50', text: 'text-purple-700' };
-            if (student.status === 'On Leave') {
-              badgeStyle = { bg: 'bg-orange-50', text: 'text-orange-700' };
-            } else if (student.status === 'Graduated') {
-              badgeStyle = { bg: 'bg-gray-100', text: 'text-gray-600' };
-            }
-
-            return (
-              <div 
-                key={student.id} 
-                className="relative rounded-xl p-5 border flex flex-col justify-between transition-shadow hover:shadow-md"
-                style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}
-              >
-                {/* Status Badge */}
-                <span className={`absolute top-4 right-4 text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyle.bg} ${badgeStyle.text}`}>
-                  {student.status}
-                </span>
-
-                {/* Profile Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.firstName}_${student.lastName}`}
-                      alt={student.firstName}
-                      className="h-14 w-14 rounded-full border bg-gray-50 shrink-0 object-cover"
-                    />
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-gray-900 truncate">{student.firstName} {student.lastName}</h3>
-                      <p className="text-[10px] font-semibold text-gray-400 font-mono tracking-tight">{student.studentId}</p>
-                    </div>
+      {/* ── Cards grid ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
+        {isLoading
+          ? Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-xl h-72 bg-muted" />
+            ))
+          : filtered.map((s) => {
+              const mark = getMark(s.studentId);
+              return (
+                <Card
+                  key={s.id}
+                  className="border-border/60 overflow-hidden group hover:shadow-md transition-all duration-300"
+                >
+                  {/* Gradient banner */}
+                  <div
+                    className="h-20 relative"
+                    // style={{ background: 'var(--gradient-primary, linear-gradient(135deg,hsl(267,55%,52%),hsl(307,60%,62%)))' }}
+                  >
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'absolute top-3 right-3 bg-white/95 backdrop-blur',
+                        s.status === 'Active'     && 'border-primary/30 text-primary',
+                        s.status === 'On Leave'   && 'border-amber-400/40 text-amber-700',
+                        s.status === 'Graduated'  && 'border-muted-foreground/30 text-muted-foreground',
+                      )}
+                    >
+                      {s.status}
+                    </Badge>
                   </div>
 
-                  {/* Info Rows */}
-                  <div className="space-y-2 text-xs text-gray-500">
-                    <div className="flex items-start gap-2">
-                      <GraduationCap className="h-4 w-4 text-purple-700 shrink-0 mt-0.5" />
-                      <span className="leading-tight">{student.program}</span>
+                  <CardContent className="px-5 pb-5 -mt-10">
+                    {/* Avatar row */}
+                    <div className="flex items-end justify-between">
+                      <img
+                        src={s.avatar}
+                        alt={s.name}
+                        className="h-20 w-20 rounded-2xl border-4 border-background object-cover bg-muted shadow-sm"
+                      />
+                      {mark && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'mb-1',
+                            mark === 'present'
+                              ? 'border-primary/30 text-primary bg-primary/5'
+                              : 'border-destructive/30 text-destructive bg-destructive/5',
+                          )}
+                        >
+                          {mark === 'present' ? 'Present' : 'Absent'} · {format(attDate, 'MMM d')}
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-purple-700 shrink-0" />
-                      <span>{student.phone}</span>
+
+                    {/* Name + ID */}
+                    <div className="mt-3">
+                      <h3 className="font-semibold text-base leading-tight">{s.name}</h3>
+                      <p className="text-xs font-mono text-muted-foreground mt-0.5">{s.studentId}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-purple-700 shrink-0" />
-                      <span className="truncate">{student.email}</span>
+
+                    {/* Info rows */}
+                    <div className="mt-4 space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <GraduationCap className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="truncate">{s.program} · Year {s.year} · Sec {s.section}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="truncate">{s.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="truncate">{s.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="truncate">{s.city} · Guardian: {s.guardian}</span>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-purple-700 shrink-0 mt-0.5" />
-                      <span className="leading-tight">{student.city} · Guardian: {student.guardian}</span>
+
+                    {/* Action buttons */}
+                    <div className="mt-4 pt-4 border-t flex items-center gap-2">
+                      <button
+                        onClick={() => setMark(s.studentId, 'present')}
+                        className={cn(
+                          'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
+                          mark === 'present'
+                            ? 'bg-primary text-primary-foreground border-primary hover:opacity-90'
+                            : 'bg-background text-foreground border-border hover:bg-accent',
+                        )}
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Present
+                      </button>
+                      <button
+                        onClick={() => setMark(s.studentId, 'absent')}
+                        className={cn(
+                          'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
+                          mark === 'absent'
+                            ? 'bg-destructive text-destructive-foreground border-destructive hover:opacity-90'
+                            : 'bg-background text-foreground border-border hover:bg-accent',
+                        )}
+                      >
+                        <XCircle className="h-4 w-4" /> Absent
+                      </button>
+                      <button
+                        onClick={() => openAttendanceFor(s)}
+                        className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-semibold border border-border bg-background hover:bg-accent transition-colors cursor-pointer"
+                      >
+                        History
+                      </button>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
-                {/* Attendance & History Buttons */}
-                <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between gap-1.5">
-                  <button 
-                    onClick={() => markAttendance(student.id, 'PRESENT')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border font-semibold transition-all cursor-pointer ${
-                      isPresent 
-                        ? 'bg-purple-800 border-purple-800 text-white' 
-                        : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
-                    }`}
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Present
-                  </button>
+        {!isLoading && filtered.length === 0 && (
+          <Card className="col-span-full border-dashed">
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+              No students match your search.
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-                  <button 
-                    onClick={() => markAttendance(student.id, 'ABSENT')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border font-semibold transition-all cursor-pointer ${
-                      isAbsent 
-                        ? 'bg-red-600 border-red-600 text-white' 
-                        : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
-                    }`}
-                  >
-                    <XCircle className="h-3.5 w-3.5" /> Absent
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      setHistoryModalStudent(student);
-                      setCurrentCalendarMonth(new Date());
-                    }}
-                    className="flex items-center justify-center p-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 cursor-pointer"
-                    title="Attendance History"
-                  >
-                    <History className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* History Calendar Modal */}
-      {historyModalStudent && (
-        <Modal 
-          isOpen={!!historyModalStudent} 
-          onClose={() => setHistoryModalStudent(null)}
-          title={`Attendance History — ${historyModalStudent.firstName} ${historyModalStudent.lastName}`}
-          className="max-w-md"
-        >
-          <div className="space-y-4">
-            {/* Month Navigator Header */}
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900">
-                {currentCalendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-              </h3>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => handleMonthChange('prev')}
-                  className="p-1.5 rounded hover:bg-gray-100 border border-gray-200"
+      {/* ── Attendance history dialog ────────────────────────────────────── */}
+      <Dialog open={attOpen} onOpenChange={setAttOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>{attStudent?.name} · Attendance history</DialogTitle>
+            <DialogDescription>{attStudent?.studentId} · {attStudent?.program}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto divide-y">
+            {studentHistory.length === 0 && (
+              <p className="text-sm text-muted-foreground py-6 text-center">No attendance marked yet.</p>
+            )}
+            {studentHistory.map(([date, value]) => (
+              <div key={date} className="flex items-center justify-between py-3">
+                <div className="text-sm font-medium">{format(new Date(date), 'EEE, MMM d, yyyy')}</div>
+                <Badge
+                  variant="outline"
+                  className={
+                    value === 'present'
+                      ? 'border-primary/30 text-primary bg-primary/5'
+                      : 'border-destructive/30 text-destructive bg-destructive/5'
+                  }
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button 
-                  onClick={() => handleMonthChange('next')}
-                  className="p-1.5 rounded hover:bg-gray-100 border border-gray-200"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                  {value === 'present' ? 'Present' : 'Absent'}
+                </Badge>
               </div>
-            </div>
-
-            {/* Weekdays row */}
-            <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400">
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                <div key={day} className="py-1">{day}</div>
-              ))}
-            </div>
-
-            {/* Calendar Days Grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((date, idx) => {
-                if (!date) return <div key={`empty-${idx}`} className="py-2" />;
-
-                const dateStr = date.toISOString().split('T')[0];
-                const key = `${historyModalStudent.id}_${dateStr}`;
-                const status = attendance[key];
-
-                let bgClass = 'hover:bg-gray-50';
-                let textClass = 'text-gray-900';
-                let indicator = null;
-
-                if (status === 'PRESENT') {
-                  bgClass = 'bg-purple-100 text-purple-800';
-                  indicator = <div className="h-1.5 w-1.5 rounded-full bg-purple-700 mx-auto mt-0.5" />;
-                } else if (status === 'ABSENT') {
-                  bgClass = 'bg-red-100 text-red-800';
-                  indicator = <div className="h-1.5 w-1.5 rounded-full bg-red-600 mx-auto mt-0.5" />;
-                }
-
-                // Check if it is today
-                const isToday = new Date().toISOString().split('T')[0] === dateStr;
-                const borderClass = isToday ? 'ring-2 ring-purple-600 ring-offset-1' : '';
-
-                return (
-                  <button
-                    key={dateStr}
-                    onClick={() => {
-                      // Allow toggling/editing history from the calendar grid!
-                      setAttendance(prev => {
-                        const currentVal = prev[key];
-                        const nextVal = currentVal === 'PRESENT' ? 'ABSENT' : currentVal === 'ABSENT' ? undefined : 'PRESENT';
-                        return {
-                          ...prev,
-                          [key]: nextVal
-                        };
-                      });
-                    }}
-                    className={`py-2 rounded-lg text-center text-xs font-medium cursor-pointer transition-all ${bgClass} ${textClass} ${borderClass}`}
-                  >
-                    <div>{date.getDate()}</div>
-                    {indicator || <div className="h-1.5 mt-0.5" />}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Calendar Legend */}
-            <div className="flex items-center justify-center gap-4 text-xs border-t border-gray-100 pt-4 mt-2">
-              <div className="flex items-center gap-1.5 text-purple-700">
-                <div className="h-2 w-2 rounded-full bg-purple-700" />
-                <span>Present</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-red-600">
-                <div className="h-2 w-2 rounded-full bg-red-600" />
-                <span>Absent</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-gray-400">
-                <div className="h-2 w-2 rounded-full bg-transparent border border-gray-300" />
-                <span>No Record / Weekend</span>
-              </div>
-            </div>
-            <p className="text-[10px] text-center text-gray-400">
-              * Tip: You can click on any calendar day to toggle or edit history records.
-            </p>
+            ))}
           </div>
-        </Modal>
-      )}
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

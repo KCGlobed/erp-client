@@ -13,6 +13,7 @@ import {
   LogOut,
   Shield,
   ChevronDown,
+  UserCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuthStore } from '../../store/useAuthStore';
@@ -93,6 +94,12 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { title: "Roles", url: "/roles", icon: Shield, reqRoles: ['SUPER_ADMIN'] },
         { title: "Permissions", url: "/permissions", icon: FileText, reqRoles: ['SUPER_ADMIN'] },
         { title: "System Logs", url: "/logs", icon: FileText, reqRoles: ['SUPER_ADMIN', 'ADMIN'] },
+      ],
+    },
+    {
+      label: "Account",
+      items: [
+        { title: "My Profile", url: "/profile", icon: UserCircle, reqRoles: ['FACULTY'] },
       ],
     },
   ];

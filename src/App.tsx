@@ -11,6 +11,7 @@ import { CohortsPage } from './routes/CohortsPage';
 import { TimetablePage } from './routes/TimetablePage';
 import { DashboardPage } from './routes/DashboardPage';
 import { StudentsPage } from './routes/StudentsPage';
+import { FacultyProfilePage } from './routes/FacultyProfilePage';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ function App() {
             <Route path="cohorts" element={<CohortsPage />} />
             <Route path="timetable" element={<TimetablePage />} />
             <Route path="students" element={<StudentsPage />} />
+            <Route path="profile" element={<FacultyProfilePage />} />
           </Route>
         </Routes>
       </BrowserRouter>
