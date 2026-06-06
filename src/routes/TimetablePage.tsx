@@ -320,47 +320,7 @@ export function TimetablePage() {
   const courseCurriculum = courses.find((c) => c.id === selectedCourseId);
   // Flatten subjects from curriculums
   const availableSubjects = courseCurriculum?.curriculums?.flatMap((curr: any) => curr.subjects || []) || [];
-  const calendarEvents = [
-    ...(calendarData.classes || []).map(
-      (item: any) => ({
-        id: item.id,
-        title: item.subject?.name,
-        date: new Date(item.date),
-        type: 'class',
-        data: item,
-      })
-    ),
 
-    ...(calendarData.holidays || []).map(
-      (item: any) => ({
-        id: item.id,
-        title: item.name,
-        date: new Date(item.startDate),
-        type: 'holiday',
-        data: item,
-      })
-    ),
-
-    ...(calendarData.events || []).map(
-      (item: any) => ({
-        id: item.id,
-        title: item.title,
-        date: new Date(item.startDate),
-        type: 'event',
-        data: item,
-      })
-    ),
-
-    ...(calendarData.exams || []).map(
-      (item: any) => ({
-        id: item.id,
-        title: item.subject?.name,
-        date: new Date(item.date),
-        type: 'exam',
-        data: item,
-      })
-    ),
-  ];
   return (
     <>
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-6">

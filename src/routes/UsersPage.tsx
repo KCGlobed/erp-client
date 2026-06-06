@@ -1,22 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
+import {
   Plus, 
   Search, 
   MoreHorizontal, 
   BookOpen, 
   X,
-  CalendarDays,
   CheckCircle2,
   XCircle,
-  History,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
-  Mail,
-  Phone,
-  MapPin,
-  GraduationCap
+  ClipboardCheck
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
@@ -25,7 +17,6 @@ import { Button, cn } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Drawer } from '../components/ui/Drawer';
 import { StudentCard } from '../components/ui/StudentCard';
-import { Modal } from '../components/ui/Modal';
 import { format } from 'date-fns';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
@@ -188,14 +179,15 @@ export function UsersPage() {
     return today.toISOString().split('T')[0];
   });
   const [attendance, setAttendance] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [pickerMonth, setPickerMonth] = useState(new Date());
+  // const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  // const [pickerMonth, setPickerMonth] = useState(new Date());
   
   // History Calendar Modal state
   const [historyModalStudent, setHistoryModalStudent] = useState<any | null>(null);
-  const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
+  const [_currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
 
   // Formatting utility for selectedDate button label
+  /*
   const formattedDateLabel = useMemo(() => {
     if (!selectedDate) return '';
     const dateObj = new Date(selectedDate);
@@ -244,6 +236,7 @@ export function UsersPage() {
       return nextMonth;
     });
   };
+  */
 
   // Mock enrichment logic to match the main page exactly
   const enrichedStudentsList = useMemo(() => {
@@ -301,7 +294,7 @@ export function UsersPage() {
   const handleMarkAllPresent = () => {
     setAttendance(prev => {
       const updated = { ...prev };
-      enrichedStudentsList.forEach((student) => {
+      enrichedStudentsList.forEach((student: any) => {
         updated[`${student.id}_${selectedDate}`] = 'PRESENT';
       });
       return updated;
@@ -312,7 +305,7 @@ export function UsersPage() {
   const stats = useMemo(() => {
     let presentCount = 0;
     let absentCount = 0;
-    enrichedStudentsList.forEach((s) => {
+    enrichedStudentsList.forEach((s: any) => {
       const status = attendance[`${s.id}_${selectedDate}`];
       if (status === 'PRESENT') presentCount++;
       if (status === 'ABSENT') absentCount++;
@@ -726,8 +719,7 @@ export function UsersPage() {
                         mode="single"
                         selected={new Date(selectedDate)}
                         onSelect={(d) => d && setSelectedDate(format(d, 'yyyy-MM-dd'))}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
+                        className="rounded-md border shadow p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>

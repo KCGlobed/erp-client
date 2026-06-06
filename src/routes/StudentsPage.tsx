@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import {
@@ -158,8 +158,7 @@ export function StudentsPage() {
                 mode="single"
                 selected={attDate}
                 onSelect={(d) => d && setAttDate(d)}
-                initialFocus
-                className="p-3 pointer-events-auto"
+                className="rounded-md border shadow"
               />
             </PopoverContent>
           </Popover>

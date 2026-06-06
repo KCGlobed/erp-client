@@ -53,7 +53,7 @@ function getStatusColor(status: string) {
 interface StatCardProps {
   label: string;
   value: number | string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   color: string;
   sub?: string;
 }
