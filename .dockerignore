@@ -1,5 +1,11 @@
-.git
-.vscode
 node_modules
-Dockerfile
+dist
+.git
+.gitignore
+*.md
 .dockerignore
+Dockerfile
+docker-compose.yml
+test
+.env
+.DS_Store
