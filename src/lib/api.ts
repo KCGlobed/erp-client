@@ -1,6 +1,6 @@
 import { useAuthStore } from '../store/useAuthStore';
 
-const BASE_URL = 'http://localhost:3000/api/v1';
+const BASE_URL = 'https://erp-server-932479078084.europe-west1.run.app/api/v1';
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const token = useAuthStore.getState().accessToken;
