@@ -243,7 +243,7 @@ export function StudentsPage() {
                             'mb-1',
                             mark === 'present'
                               ? 'border-primary/30 text-primary bg-primary/5'
-                              : 'border-destructive/30 text-destructive bg-destructive/5',
+                              : 'border-destructive/30 text-white bg-destructive/5',
                           )}
                         >
                           {mark === 'present' ? 'Present' : 'Absent'} · {format(attDate, 'MMM d')}

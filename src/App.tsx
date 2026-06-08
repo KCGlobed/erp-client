@@ -12,6 +12,7 @@ import { TimetablePage } from './routes/TimetablePage';
 import { DashboardPage } from './routes/DashboardPage';
 import { StudentsPage } from './routes/StudentsPage';
 import { FacultyProfilePage } from './routes/FacultyProfilePage';
+import { StudentsProfilePage } from './routes/StudentProfilePage';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ function App() {
             <Route path="timetable" element={<TimetablePage />} />
             <Route path="students" element={<StudentsPage />} />
             <Route path="profile" element={<FacultyProfilePage />} />
+            <Route path='studentprofile' element={<StudentsProfilePage/>}/> 
           </Route>
         </Routes>
       </BrowserRouter>

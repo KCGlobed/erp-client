@@ -8,9 +8,9 @@ export function DashboardLayout() {
   const { accessToken, user } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
 
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
+  // if (!accessToken) {
+  //   return <Navigate to="/login" replace />;
+  // }
 
   const initials = `${user?.firstName?.[0] || 'A'}${user?.lastName?.[0] || 'D'}`.toUpperCase();
 
