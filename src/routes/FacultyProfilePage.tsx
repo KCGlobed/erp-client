@@ -192,7 +192,7 @@ export function FacultyProfilePage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 font-sans">
+    <div className="max-w-6xl mx-auto py-8 font-sans">
       {/* ── Top Nav / Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
