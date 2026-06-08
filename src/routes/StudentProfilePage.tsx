@@ -7,20 +7,17 @@ import {
   MapPin,
   Save,
   AlertCircle,
-  Calendar as CalendarIcon,
+  Calendar,
   Lock,
   Bell,
   Check,
   Edit2,
   X,
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { Card, CardContent } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
-import { Calendar } from '../components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 
 // Helper to format ISO date string to YYYY-MM-DD
 const formatDateForInput = (dateStr: string | null | undefined) => {
@@ -37,7 +34,7 @@ interface ExperienceItem {
   to: string;
 }
 
-export function FacultyProfilePage() {
+export function StudentsProfilePage() {
   const { user: authUser } = useAuthStore();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'personal' | 'account' | 'security' | 'notifications'>('personal');
@@ -113,7 +110,7 @@ export function FacultyProfilePage() {
   // ── Mutations ────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { firstName, lastName } = form;
+      const { firstName, lastName, middleName } = form;
 
       // Update base user name (First Name, Last Name)
       if (firstName !== data?.firstName || lastName !== data?.lastName) {
@@ -123,26 +120,9 @@ export function FacultyProfilePage() {
         });
       }
 
-      // Update middleName, dateOfBirth, and dateOfJoining in faculty profile
+      // Update middleName in faculty profile
       const profilePayload = {
-        middleName: form.middleName || null,
-        gender: form.gender || null,
-        profilePhotoUrl: form.profilePhotoUrl || null,
-        personalEmail: form.personalEmail || null,
-        mobileNumber: form.mobileNumber || null,
-        alternateMobileNumber: form.alternateMobileNumber || null,
-        emergencyContactName: form.emergencyContactName || null,
-        emergencyContactNumber: form.emergencyContactNumber || null,
-        currentAddress: form.currentAddress || null,
-        permanentAddress: form.permanentAddress || null,
-        dateOfBirth: form.dateOfBirth || null,
-        dateOfJoining: form.dateOfJoining || null,
-
-        // Convert experience array back to JSON string
-        experienceDescription:
-          form.experience.length > 0
-            ? JSON.stringify(form.experience)
-            : null,
+        middleName: middleName || null,
       };
 
       return apiFetch('/faculty-profile/me', {
@@ -293,7 +273,7 @@ export function FacultyProfilePage() {
                 )}
                 {form.dateOfJoining && (
                   <span className="flex items-center gap-1.5">
-                    <CalendarIcon className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> Joined {form.dateOfJoining}
+                    <Calendar className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> Joined {form.dateOfJoining}
                   </span>
                 )}
               </div>
@@ -336,10 +316,11 @@ export function FacultyProfilePage() {
                       value={form.firstName}
                       onChange={handleChange}
                       disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -350,10 +331,11 @@ export function FacultyProfilePage() {
                       value={form.middleName}
                       onChange={handleChange}
                       disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -364,10 +346,11 @@ export function FacultyProfilePage() {
                       value={form.lastName}
                       onChange={handleChange}
                       disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                 </div>
@@ -375,113 +358,40 @@ export function FacultyProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Gender</label>
-                    {!editing ? (
-                      <input
-                        type="text"
-                        value={form.gender}
-                        disabled={true}
-                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
-                      />
-                    ) : (
-                      <select
-                        name="gender"
-                        value={form.gender}
-                        onChange={handleChange}
-                        disabled={!editing}
-                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                    )}
-
+                    <select
+                      name="gender"
+                      value={form.gender}
+                      onChange={handleChange}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Date of Birth</label>
-                    {!editing ? (
-                      <input
-                        type="text"
-                        value={form.dateOfBirth || ''}
-                        disabled={true}
-                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
-                      />
-                    ) : (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-left flex items-center justify-between cursor-pointer w-full"
-                          >
-                            <span>
-                              {form.dateOfBirth
-                                ? format(new Date(form.dateOfBirth), 'PPP')
-                                : 'Select Date of Birth'}
-                            </span>
-                            <CalendarIcon className="h-4 w-4 text-neutral-400" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-white border border-neutral-200 rounded-lg shadow-lg z-50" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={form.dateOfBirth ? new Date(form.dateOfBirth) : undefined}
-                            onSelect={(d) => {
-                              if (d) {
-                                setForm((prev) => ({
-                                  ...prev,
-                                  dateOfBirth: format(d, 'yyyy-MM-dd'),
-                                }));
-                              }
-                            }}
-                            className="p-3 bg-white"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    )}
+                    <input
+                      type="date"
+                      name="dateOfBirth"
+                      value={form.dateOfBirth}
+                      onChange={handleChange}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Date of Joining</label>
-                    {!editing ? (
-                      <input
-                        type="text"
-                        value={form.dateOfJoining || ''}
-                        placeholder=""
-                        disabled={true}
-                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
-                      />
-                    ) : (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-left flex items-center justify-between cursor-pointer w-full"
-                          >
-                            <span>
-                              {form.dateOfJoining
-                                ? format(new Date(form.dateOfJoining), 'PPP')
-                                : 'Select Date of Joining'}
-                            </span>
-                            <CalendarIcon className="h-4 w-4 text-neutral-400" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-white border border-neutral-200 rounded-lg shadow-lg z-50" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={form.dateOfJoining ? new Date(form.dateOfJoining) : undefined}
-                            onSelect={(d) => {
-                              if (d) {
-                                setForm((prev) => ({
-                                  ...prev,
-                                  dateOfJoining: format(d, 'yyyy-MM-dd'),
-                                }));
-                              }
-                            }}
-                            className="p-3 bg-white"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    )}
+                    <input
+                      type="date"
+                      name="dateOfJoining"
+                      value={form.dateOfJoining}
+                      onChange={handleChange}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -499,12 +409,8 @@ export function FacultyProfilePage() {
                     <input
                       type="email"
                       value={data?.email ?? ''}
-                      // value={form.personalEmail}
-                      disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -514,11 +420,8 @@ export function FacultyProfilePage() {
                       name="personalEmail"
                       value={form.personalEmail}
                       onChange={handleChange}
-                      disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -528,11 +431,8 @@ export function FacultyProfilePage() {
                       name="mobileNumber"
                       value={form.mobileNumber}
                       onChange={handleChange}
-                      disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -542,11 +442,8 @@ export function FacultyProfilePage() {
                       name="alternateMobileNumber"
                       value={form.alternateMobileNumber}
                       onChange={handleChange}
-                      disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
                     />
                   </div>
                 </div>
@@ -567,11 +464,8 @@ export function FacultyProfilePage() {
                       name="emergencyContactName"
                       value={form.emergencyContactName}
                       onChange={handleChange}
-                      disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -581,11 +475,8 @@ export function FacultyProfilePage() {
                       name="emergencyContactNumber"
                       value={form.emergencyContactNumber}
                       onChange={handleChange}
-                      disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                        ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                        }`}
+                      disabled={true}
+                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
                     />
                   </div>
                 </div>
@@ -605,11 +496,8 @@ export function FacultyProfilePage() {
                     name="currentAddress"
                     value={form.currentAddress}
                     onChange={handleChange}
-                    disabled={!editing}
-                    className={`h-10 px-3 pt-2 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                      ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                      : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                      }`}
+                    disabled={true}
+                    className="px-3 py-2.5 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none resize-none cursor-default"
                   />
                 </div>
 
@@ -620,11 +508,8 @@ export function FacultyProfilePage() {
                     name="permanentAddress"
                     value={form.permanentAddress}
                     onChange={handleChange}
-                    disabled={!editing}
-                    className={`h-10 pt-2 pl-4 rounded-lg border text-sm font-medium transition-all outline-none ${!editing
-                      ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                      : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                      }`}
+                    disabled={true}
+                    className="px-3 py-2.5 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none resize-none cursor-default"
                   />
                 </div>
               </CardContent>
