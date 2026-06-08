@@ -20,6 +20,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/badge';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { BigCalendar } from '../components/ui/BigCalendar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { cn } from '../components/ui/Button';
 
@@ -41,8 +42,8 @@ export function StudentsPage() {
   const [query, setQuery] = useState('');
   const [attendance, setAttendance] = useState<AttendanceMap>({});
   const [attDate, setAttDate] = useState<Date>(new Date());
-  const [attOpen, setAttOpen] = useState(false);
   const [attStudent, setAttStudent] = useState<any | null>(null);
+  const [openBigCalender, setOpenBigCalender] = useState(false);
 
   const isFaculty = user?.roles?.includes('FACULTY');
   const isAdmin = user?.roles?.some(r => ['ADMIN', 'SUPER_ADMIN'].includes(r));
@@ -101,11 +102,35 @@ export function StudentsPage() {
   const presentCount = filtered.filter((s) => getMark(s.studentId) === 'present').length;
   const absentCount = filtered.filter((s) => getMark(s.studentId) === 'absent').length;
 
-  const openAttendanceFor = (s: any) => { setAttStudent(s); setAttOpen(true); };
+  const openAttendanceFor = (s: any) => {
+    setAttStudent(s);
+    setOpenBigCalender(true);
+  };
 
-  const studentHistory = attStudent
-    ? Object.entries(attendance[attStudent.studentId] || {}).sort((a, b) => (a[0] < b[0] ? 1 : -1))
-    : [];
+  const calendarEvents = useMemo(() => {
+    if (!attStudent) return [];
+    const studentAtt = attendance[attStudent.studentId] || {};
+    return Object.entries(studentAtt).map(([dateStr, status]) => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return {
+        id: `${attStudent.studentId}-${dateStr}`,
+        title: status === 'present' ? 'Present' : 'Absent',
+        date: new Date(year, month - 1, day),
+        type: status as 'present' | 'absent',
+      };
+    });
+  }, [attStudent, attendance]);
+
+  const studentStats = useMemo(() => {
+    if (!attStudent) return { present: 0, absent: 0, total: 0, rate: 0 };
+    const studentAtt = attendance[attStudent.studentId] || {};
+    const values = Object.values(studentAtt);
+    const present = values.filter((v) => v === 'present').length;
+    const absent = values.filter((v) => v === 'absent').length;
+    const total = values.length;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+    return { present, absent, total, rate };
+  }, [attStudent, attendance]);
 
   return (
     <>
@@ -322,32 +347,41 @@ export function StudentsPage() {
         )}
       </div>
 
-      {/* ── Attendance history dialog ────────────────────────────────────── */}
-      <Dialog open={attOpen} onOpenChange={setAttOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>{attStudent?.name} · Attendance history</DialogTitle>
-            <DialogDescription>{attStudent?.studentId} · {attStudent?.program}</DialogDescription>
+      {/* ── Attendance history calendar dialog ────────────────────────────── */}
+      <Dialog open={openBigCalender} onOpenChange={setOpenBigCalender}>
+        <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] max-h-[90vh] overflow-y-auto rounded-xl p-6">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <span className="text-primary">{attStudent?.name}</span>
+              <span className="text-muted-foreground font-normal text-sm">Attendance History</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium">
+              ID: {attStudent?.studentId} • Program: {attStudent?.program} • Section: {attStudent?.section}
+            </DialogDescription>
           </DialogHeader>
-          <div className="max-h-80 overflow-y-auto divide-y">
-            {studentHistory.length === 0 && (
-              <p className="text-sm text-muted-foreground py-6 text-center">No attendance marked yet.</p>
-            )}
-            {studentHistory.map(([date, value]) => (
-              <div key={date} className="flex items-center justify-between py-3">
-                <div className="text-sm font-medium">{format(new Date(date), 'EEE, MMM d, yyyy')}</div>
-                <Badge
-                  variant="outline"
-                  className={
-                    value === 'present'
-                      ? 'border-primary/30 text-primary bg-primary/5'
-                      : 'border-destructive/30 text-destructive bg-destructive/5'
-                  }
-                >
-                  {value === 'present' ? 'Present' : 'Absent'}
-                </Badge>
-              </div>
-            ))}
+
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 my-4">
+            <div className="p-3 rounded-lg border bg-card shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-muted-foreground font-medium">Attendance Rate</span>
+              <span className="text-lg font-bold text-primary mt-1">{studentStats.rate}%</span>
+            </div>
+            <div className="p-3 rounded-lg border bg-card bg-emerald-50/10 border-emerald-100/50 shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-muted-foreground font-medium">Present Days</span>
+              <span className="text-lg font-bold text-emerald-600 mt-1">{studentStats.present}</span>
+            </div>
+            <div className="p-3 rounded-lg border bg-card bg-rose-50/10 border-rose-100/50 shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-muted-foreground font-medium">Absent Days</span>
+              <span className="text-lg font-bold text-rose-600 mt-1">{studentStats.absent}</span>
+            </div>
+            <div className="p-3 rounded-lg border bg-card shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-muted-foreground font-medium">Total Sessions</span>
+              <span className="text-lg font-bold text-foreground mt-1">{studentStats.total}</span>
+            </div>
+          </div>
+
+          <div className="mt-2">
+            <BigCalendar events={calendarEvents} />
           </div>
         </DialogContent>
       </Dialog>

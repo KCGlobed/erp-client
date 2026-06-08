@@ -7,7 +7,7 @@ export interface CalendarEvent {
   id: string;
   title: string;
   date: Date;
-  type?: 'class' | 'holiday' | 'event' | 'exam';
+  type?: 'class' | 'holiday' | 'event' | 'exam' | 'present' | 'absent';
   data?: any;
 }
 
@@ -180,14 +180,29 @@ export function BigCalendar({
 
                 {dayEvents
                   .slice(0, 3)
-                  .map((event) => (
-                    <div
-                      key={event.id}
-                      className="text-[10px] truncate px-1 py-0.5 rounded bg-blue-50 text-blue-700"
-                    >
-                      {event.title}
-                    </div>
-                  ))}
+                  .map((event) => {
+                    let badgeClass = "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/30";
+                    if (event.type === 'present') {
+                      badgeClass = "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30 font-medium";
+                    } else if (event.type === 'absent') {
+                      badgeClass = "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/30 font-medium";
+                    } else if (event.type === 'holiday') {
+                      badgeClass = "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/30 font-medium";
+                    } else if (event.type === 'event') {
+                      badgeClass = "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 border border-purple-200/50 dark:border-purple-800/30 font-medium";
+                    } else if (event.type === 'exam') {
+                      badgeClass = "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200/50 dark:border-red-800/30 font-medium";
+                    }
+
+                    return (
+                      <div
+                        key={event.id}
+                        className={`text-[10px] truncate px-1.5 py-0.5 rounded ${badgeClass}`}
+                      >
+                        {event.title}
+                      </div>
+                    );
+                  })}
 
                 {dayEvents.length > 3 && (
                   <div className="text-[10px] text-gray-400">

@@ -113,7 +113,7 @@ export function FacultyProfilePage() {
   // ── Mutations ────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { firstName, lastName, middleName, dateOfBirth, dateOfJoining } = form;
+      const { firstName, lastName } = form;
 
       // Update base user name (First Name, Last Name)
       if (firstName !== data?.firstName || lastName !== data?.lastName) {
