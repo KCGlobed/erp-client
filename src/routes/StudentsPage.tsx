@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import { BigCalendar } from '../components/ui/BigCalendar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { cn } from '../components/ui/Button';
+import ConfirmDialog from '../components/ui/configDialog';
 
 // ─── Mock enrichment data ────────────────────────────────────────────────────
 const MOCK_PROGRAMS = ['B.Tech CSE', 'B.Sc Physics', 'MBA', 'B.Com (H)', 'B.Tech ECE', 'B.A English'];
@@ -35,7 +36,7 @@ const MOCK_STATUSES: ('Active' | 'On Leave' | 'Graduated')[] = ['Active', 'Activ
 // Pravatar images so the card avatars look identical to the inspiration
 const MOCK_AVATARS = [12, 47, 33, 45, 15, 48, 8, 49, 11, 20, 25, 3, 7, 22, 27];
 
-type AttendanceMap = Record<string, Record<string, 'present' | 'absent'>>;
+type AttendanceMap = Record<string, Record<string, 'present' | 'absent' | 'all-present'>>;
 
 export function StudentsPage() {
   const { user } = useAuthStore();
@@ -44,6 +45,12 @@ export function StudentsPage() {
   const [attDate, setAttDate] = useState<Date>(new Date());
   const [attStudent, setAttStudent] = useState<any | null>(null);
   const [openBigCalender, setOpenBigCalender] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    studentId?: string;
+    studentName?: string;
+    action: 'present' | 'absent' | 'all-present';
+  } | null>(null);
 
   const isFaculty = user?.roles?.includes('FACULTY');
   const isAdmin = user?.roles?.some(r => ['ADMIN', 'SUPER_ADMIN'].includes(r));
@@ -76,6 +83,20 @@ export function StudentsPage() {
       }));
     },
   });
+
+  const handleAttendanceClick = (
+    studentId: string,
+    studentName: string,
+    action: 'present' | 'absent'
+  ) => {
+    setPendingAction({
+      studentId,
+      studentName,
+      action,
+    });
+
+    setConfirmOpen(true);
+  };
 
   // ── Derived state ───────────────────────────────────────────────────────────
   const filtered = useMemo(
@@ -189,19 +210,19 @@ export function StudentsPage() {
           </Popover>
 
           <div className="flex items-center gap-2 lg:ml-auto">
-            <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5">
+            <Badge variant="outline" className="border-primary/30 h-8 text-primary bg-primary/5">
               <CheckCircle2 className="h-3 w-3 mr-1" /> Present {presentCount}
             </Badge>
-            <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/5">
+            <Badge variant="outline" className="border-destructive/30 h-8 text-destructive bg-destructive/5">
               <XCircle className="h-3 w-3 mr-1" /> Absent {absentCount}
             </Badge>
             <button
               onClick={() => {
-                const updates: AttendanceMap = { ...attendance };
-                filtered.forEach((s) => {
-                  updates[s.studentId] = { ...(updates[s.studentId] || {}), [dateKey]: 'present' };
+                setPendingAction({
+                  action: 'all-present',
                 });
-                setAttendance(updates);
+
+                setConfirmOpen(true);
               }}
               className="inline-flex items-center gap-2 px-3 h-8 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
             >
@@ -305,7 +326,13 @@ export function StudentsPage() {
                   {/* Action buttons */}
                   <div className="mt-4 pt-4 border-t flex items-center gap-2">
                     <button
-                      onClick={() => setMark(s.studentId, 'present')}
+                      onClick={() =>
+                        handleAttendanceClick(
+                          s.studentId,
+                          s.name,
+                          'present'
+                        )
+                      }
                       className={cn(
                         'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
                         mark === 'present'
@@ -316,7 +343,13 @@ export function StudentsPage() {
                       <CheckCircle2 className="h-4 w-4" /> Present
                     </button>
                     <button
-                      onClick={() => setMark(s.studentId, 'absent')}
+                      onClick={() =>
+                        handleAttendanceClick(
+                          s.studentId,
+                          s.name,
+                          'absent'
+                        )
+                      }
                       className={cn(
                         'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
                         mark === 'absent'
@@ -327,7 +360,9 @@ export function StudentsPage() {
                       <XCircle className="h-4 w-4" /> Absent
                     </button>
                     <button
-                      onClick={() => openAttendanceFor(s)}
+                      onClick={
+                        () => openAttendanceFor(s)
+                      }
                       className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-semibold border border-border bg-background hover:bg-accent transition-colors cursor-pointer"
                     >
                       History
@@ -349,7 +384,7 @@ export function StudentsPage() {
 
       {/* ── Attendance history calendar dialog ────────────────────────────── */}
       <Dialog open={openBigCalender} onOpenChange={setOpenBigCalender}>
-        <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] max-h-[90vh] overflow-y-auto rounded-xl p-6">
+        <DialogContent className="max-w-6xl w-[95vw] sm:w-[90vw] max-h-[90vh] overflow-y-auto rounded-xl p-6">
           <DialogHeader className="pb-4 border-b">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <span className="text-primary">{attStudent?.name}</span>
@@ -361,7 +396,7 @@ export function StudentsPage() {
           </DialogHeader>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 my-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 my-2">
             <div className="p-3 rounded-lg border bg-card shadow-sm flex flex-col justify-between">
               <span className="text-xs text-muted-foreground font-medium">Attendance Rate</span>
               <span className="text-lg font-bold text-primary mt-1">{studentStats.rate}%</span>
@@ -380,11 +415,45 @@ export function StudentsPage() {
             </div>
           </div>
 
-          <div className="mt-2">
+          <div>
             <BigCalendar events={calendarEvents} />
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        action={pendingAction?.action || 'present'}
+        studentName={pendingAction?.studentName || ''}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setPendingAction(null);
+        }}
+        onConfirm={() => {
+          if (!pendingAction) return;
+
+          if (pendingAction.action === 'all-present') {
+            const updates: AttendanceMap = { ...attendance };
+
+            filtered.forEach((s) => {
+              updates[s.studentId] = {
+                ...(updates[s.studentId] || {}),
+                [dateKey]: 'present',
+              };
+            });
+
+            setAttendance(updates);
+          } else {
+            setMark(
+              pendingAction.studentId!,
+              pendingAction.action
+            );
+          }
+
+          setConfirmOpen(false);
+          setPendingAction(null);
+        }}
+      />
     </>
   );
 }

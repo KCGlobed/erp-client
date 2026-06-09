@@ -89,10 +89,8 @@ export function BigCalendar({
     <div className="bg-white rounded-xl border shadow-sm">
 
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-
+      <div className="flex items-center justify-between p-3 border-b">
         <div className="flex items-center gap-2">
-
           <Button
             size="icon"
             variant="outline"
@@ -105,7 +103,7 @@ export function BigCalendar({
             <ChevronLeft size={16} />
           </Button>
 
-          <h2 className="font-semibold w-40 text-center">
+          <h2 className="font-semibold w-40 text-center text-sm">
             {monthNames[month]} {year}
           </h2>
 
@@ -124,7 +122,6 @@ export function BigCalendar({
       </div>
 
       {/* Week Names */}
-
       <div className="grid grid-cols-7 bg-gray-50 border-b">
         {[
           'Sun',
@@ -137,7 +134,7 @@ export function BigCalendar({
         ].map((day) => (
           <div
             key={day}
-            className="py-3 text-center text-xs font-semibold"
+            className="py-2 text-center text-xs font-semibold text-gray-600"
           >
             {day}
           </div>
@@ -145,16 +142,13 @@ export function BigCalendar({
       </div>
 
       {/* Days */}
-
       <div className="grid grid-cols-7">
-
         {days.map((day, index) => {
-
           if (!day) {
             return (
               <div
                 key={index}
-                className="min-h-[110px] border"
+                className="min-h-[72px] border"
               />
             );
           }
@@ -164,7 +158,7 @@ export function BigCalendar({
           return (
             <div
               key={day.toISOString()}
-              className="min-h-[110px] border p-2 cursor-pointer hover:bg-gray-50"
+              className="min-h-[72px] border p-1.5 cursor-pointer hover:bg-gray-50"
               onClick={() =>
                 onDayClick?.(
                   day,
@@ -172,12 +166,11 @@ export function BigCalendar({
                 )
               }
             >
-              <div className="font-semibold text-sm">
+              <div className="font-semibold text-xs text-gray-700">
                 {day.getDate()}
               </div>
 
-              <div className="space-y-1 mt-2">
-
+              <div className="space-y-1 mt-1">
                 {dayEvents
                   .slice(0, 3)
                   .map((event) => {
@@ -197,7 +190,7 @@ export function BigCalendar({
                     return (
                       <div
                         key={event.id}
-                        className={`text-[10px] truncate px-1.5 py-0.5 rounded ${badgeClass}`}
+                        className={`text-[9px] truncate px-1 py-0.5 rounded leading-none ${badgeClass}`}
                       >
                         {event.title}
                       </div>
@@ -205,7 +198,7 @@ export function BigCalendar({
                   })}
 
                 {dayEvents.length > 3 && (
-                  <div className="text-[10px] text-gray-400">
+                  <div className="text-[9px] text-gray-400">
                     +{dayEvents.length - 3}
                   </div>
                 )}
