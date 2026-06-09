@@ -1,14 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  BookOpen, 
+  Plus,
+  Search,
+  MoreHorizontal,
+  BookOpen,
   X,
   CheckCircle2,
   XCircle,
-  ClipboardCheck
+  ClipboardCheck,
+  Users,
+  GraduationCap,
+  Briefcase
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
@@ -24,6 +27,29 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent } from '../components/ui/Card';
 import { CalendarIcon } from 'lucide-react';
+import { Tabs } from '../components/ui/Tabs';
+
+interface UserRoleTabsProps {
+  activeTab: 'all' | 'student' | 'faculty';
+  onChange: (tab: 'all' | 'student' | 'faculty') => void;
+}
+
+export function UserRoleTabs({ activeTab, onChange }: UserRoleTabsProps) {
+  const tabs = [
+    { id: 'all', label: 'All Users', icon: <Users className="w-4 h-4" /> },
+    { id: 'student', label: 'Students', icon: <GraduationCap className="w-4 h-4" /> },
+    { id: 'faculty', label: 'Faculty', icon: <Briefcase className="w-4 h-4" /> },
+  ];
+
+  return (
+    <Tabs
+      tabs={tabs}
+      activeTab={activeTab}
+      onChange={(id) => onChange(id as 'all' | 'student' | 'faculty')}
+    />
+  );
+}
+
 
 // Mock enrichment data structures to align both pages perfectly
 const MOCK_PROGRAMS = [
@@ -49,7 +75,8 @@ export function UsersPage() {
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [activeMenuUserId, setActiveMenuUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'permissions' | 'courses' | 'students'>('details');
-  
+  const [activeRoleTab, setActiveRoleTab] = useState<'all' | 'student' | 'faculty'>('all');
+
   // Custom confirm popup state
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -181,7 +208,7 @@ export function UsersPage() {
   const [attendance, setAttendance] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
   // const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   // const [pickerMonth, setPickerMonth] = useState(new Date());
-  
+
   // History Calendar Modal state
   const [historyModalStudent, setHistoryModalStudent] = useState<any | null>(null);
   const [_currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
@@ -363,9 +390,15 @@ export function UsersPage() {
     : ['FACULTY', 'STUDENT'];
 
   const allUsers: any[] = data?.data || [];
-  const filtered = allUsers.filter(u =>
-    `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = allUsers.filter(u => {
+    const matchesSearch = `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase());
+    const matchesRole = activeRoleTab === 'all'
+      ? true
+      : activeRoleTab === 'student'
+        ? u.roles?.includes('STUDENT')
+        : u.roles?.includes('FACULTY');
+    return matchesSearch && matchesRole;
+  });
 
   const permissions = permissionsData?.data || [];
   const userDirectPerms = new Set(userDirectPermsData?.data?.map((p: any) => p.id) || []);
@@ -403,8 +436,9 @@ export function UsersPage() {
       </div>
 
       <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--card)' }}>
-        <div className="flex flex-col sm:flex-row gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="relative w-full md:w-64">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
+
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--muted-foreground)' }} />
             <input
               type="text"
@@ -415,6 +449,7 @@ export function UsersPage() {
               style={{ backgroundColor: 'var(--muted)', border: '1px solid transparent', color: 'var(--foreground)' }}
             />
           </div>
+          <UserRoleTabs activeTab={activeRoleTab} onChange={setActiveRoleTab} />
         </div>
 
         <Table>

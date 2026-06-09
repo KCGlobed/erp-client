@@ -54,6 +54,13 @@ export function LogsPage() {
               <TableHead>Level</TableHead>
               <TableHead>Context</TableHead>
               <TableHead>Message</TableHead>
+              <TableHead>User Agent</TableHead>
+              <TableHead>ipAddress</TableHead>
+              <TableHead>duration</TableHead>
+              <TableHead>method</TableHead>
+              <TableHead>statusCode</TableHead>
+              <TableHead>url</TableHead>
+              <TableHead>stack</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -81,6 +88,27 @@ export function LogsPage() {
                 </TableCell>
                 <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
                   {log.message}
+                </TableCell>
+                <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
+                  {log.userAgent}
+                </TableCell>
+                <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
+                  {log.ipAddress}
+                </TableCell>
+                <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
+                  {log.duration}
+                </TableCell>
+                <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
+                  {log.method}
+                </TableCell>
+                <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
+                  {log.statusCode}
+                </TableCell>
+                <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
+                  {log.url}
+                </TableCell>
+                <TableCell className="text-sm" style={{ color: 'var(--foreground)' }}>
+                  {log.stack}
                 </TableCell>
               </TableRow>
             ))}
