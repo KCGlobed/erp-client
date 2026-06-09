@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, MapPin, User, AlertCircle, Sparkles, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, MapPin, User, AlertCircle, Sparkles, FileText, ClipboardCheck } from 'lucide-react';
+import { AttendanceModal } from '../components/attendance/AttendanceModal';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { Button } from '../components/ui/Button';
@@ -20,6 +21,9 @@ export function TimetablePage() {
   const [selectedDayEvents, setSelectedDayEvents] = useState<any[] | null>(null);
   const [selectedDayLabel, setSelectedDayLabel] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
+  const [selectedAttendanceClass, setSelectedAttendanceClass] = useState<any>(null);
 
   // Form States - Classes
   const [classForm, setClassForm] = useState({
@@ -486,6 +490,22 @@ export function TimetablePage() {
                       <div className="flex items-center gap-1"><User className="w-3 h-3" /> {ev.faculty?.firstName} {ev.faculty?.lastName}</div>
                       <div className="flex items-center gap-1 font-semibold text-gray-700">Cohort: {ev.cohort?.name}</div>
                       {ev.topic && <div className="col-span-2 mt-1 bg-white p-1 rounded border border-gray-100">Topic: {ev.topic}</div>}
+                      
+                      {ev.facultyId === user?.id && (
+                        <div className="col-span-2 mt-2 border-t pt-2">
+                          <Button 
+                            onClick={() => {
+                              setSelectedAttendanceClass(ev);
+                              setAttendanceModalOpen(true);
+                            }} 
+                            size="sm" 
+                            variant="outline"
+                            className="w-full flex items-center justify-center gap-1 py-1 h-auto text-[10px]"
+                          >
+                            <ClipboardCheck className="w-3 h-3" /> Take Attendance
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                   {ev.itemType === 'exam' && (
@@ -974,6 +994,15 @@ export function TimetablePage() {
           )}
         </div>
       </Drawer>
+
+      <AttendanceModal
+        isOpen={attendanceModalOpen}
+        onClose={() => {
+          setAttendanceModalOpen(false);
+          setSelectedAttendanceClass(null);
+        }}
+        classSchedule={selectedAttendanceClass}
+      />
     </>
   );
 }
