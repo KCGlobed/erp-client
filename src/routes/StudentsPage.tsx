@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import {
   Plus,
@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   XCircle,
   ClipboardCheck,
+  Save
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
@@ -40,7 +41,11 @@ type AttendanceMap = Record<string, Record<string, 'present' | 'absent' | 'all-p
 
 export function StudentsPage() {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const saveTimeoutRef = useRef(null);
+
   const [attendance, setAttendance] = useState<AttendanceMap>({});
   const [attDate, setAttDate] = useState<Date>(new Date());
   const [attStudent, setAttStudent] = useState<any | null>(null);
@@ -52,8 +57,100 @@ export function StudentsPage() {
     action: 'present' | 'absent' | 'all-present';
   } | null>(null);
 
+
   const isFaculty = user?.roles?.includes('FACULTY');
-  const isAdmin = user?.roles?.some(r => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+  const isAdmin = user?.roles?.some((r: string) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+
+  const { data: scheduleData } = useQuery({
+    queryKey: ['timetable', isAdmin ? 'all' : 'personal'],
+    queryFn: async () => {
+      if (isAdmin) {
+        const res = await apiFetch('/timetable/schedule');
+        // Admin /timetable/schedule returns an array directly, whereas personalized returns { classes, ... }
+        return { classes: Array.isArray(res) ? res : res?.data || [] };
+      }
+      return apiFetch('/timetable/personalized');
+    },
+  });
+
+  const classesOnDate = useMemo(() => {
+    if (!scheduleData?.classes) return [];
+    return scheduleData.classes.filter((c) => {
+      return format(new Date(c.date), 'yyyy-MM-dd') === format(attDate, 'yyyy-MM-dd');
+    });
+  }, [scheduleData, attDate]);
+
+  useEffect(() => {
+    if (classesOnDate.length > 0) {
+      if (!selectedClassId || !classesOnDate.find((c: any) => c.id === selectedClassId)) {
+        setSelectedClassId(classesOnDate[0].id);
+      }
+    } else {
+      setSelectedClassId('');
+    }
+  }, [classesOnDate, selectedClassId]);
+
+  const selectedClass = classesOnDate.find((c) => c.id === selectedClassId);
+
+  const { data: existingAttendance } = useQuery({
+    queryKey: ['attendance', selectedClassId],
+    queryFn: () => apiFetch('/attendance/class/' + selectedClassId),
+    enabled: !!selectedClassId,
+  });
+
+  useEffect(() => {
+    if (existingAttendance?.records && selectedClassId) {
+      const newMap = {};
+      const dKey = format(attDate, 'yyyy-MM-dd');
+      existingAttendance.records.forEach((r) => {
+        newMap[r.studentId] = { [dKey]: r.status.toLowerCase() };
+      });
+      setAttendance(newMap);
+    } else {
+      setAttendance({});
+    }
+  }, [existingAttendance, selectedClassId, attDate]);
+
+  const saveAttendance = useMutation({
+    mutationFn: async (payload) => {
+      return apiFetch('/attendance/class/' + selectedClassId, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance', selectedClassId] });
+      // Remove any annoying alerts, just quiet success
+    },
+    onError: (error) => {
+      alert('Error saving attendance: ' + error.message);
+    }
+  });
+
+  const triggerSave = (updates: any) => {
+    if (!selectedClassId) {
+      alert('Please select a class from the dropdown before marking attendance.');
+      return;
+    }
+    const records = Object.entries(updates).map(([studentId, dates]: [string, any]) => {
+      const status = dates[format(attDate, 'yyyy-MM-dd')];
+      if (!status) return null;
+      return { studentId, status: status.toUpperCase() };
+    }).filter(Boolean);
+    
+    saveAttendance.mutate({
+      date: attDate.toISOString(),
+      records,
+    });
+  };
+
+  const scheduleAutoSave = (updates) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      triggerSave(updates);
+    }, 2000);
+  };
+  // Role checks removed
 
   // ── Fetch students ──────────────────────────────────────────────────────────
   const { data: students = [], isLoading } = useQuery<any[]>({
@@ -71,7 +168,7 @@ export function StudentsPage() {
       return list.map((s: any, idx: number) => ({
         ...s,
         name: `${s.firstName} ${s.lastName}`,
-        studentId: `STU-2024-${String(idx + 1).padStart(3, '0')}`,
+        displayId: `STU-2024-${String(idx + 1).padStart(3, '0')}`,
         program: MOCK_PROGRAMS[idx % MOCK_PROGRAMS.length],
         year: MOCK_YEARS[idx % MOCK_YEARS.length],
         section: MOCK_SECTIONS[idx % MOCK_SECTIONS.length],
@@ -89,69 +186,74 @@ export function StudentsPage() {
     studentName: string,
     action: 'present' | 'absent'
   ) => {
-    setPendingAction({
-      studentId,
-      studentName,
-      action,
-    });
-
-    setConfirmOpen(true);
+    setMark(studentId, action);
   };
 
   // ── Derived state ───────────────────────────────────────────────────────────
-  const filtered = useMemo(
-    () =>
-      students.filter(
-        (s) =>
-          s.name.toLowerCase().includes(query.toLowerCase()) ||
-          s.email.toLowerCase().includes(query.toLowerCase()) ||
-          s.studentId.toLowerCase().includes(query.toLowerCase()) ||
-          s.program.toLowerCase().includes(query.toLowerCase()),
-      ),
-    [students, query],
-  );
+  const filtered = useMemo(() => {
+    let list = students;
+    if (selectedClass) {
+      list = list.filter((s) => s.enrollments?.some((e) => e.course?.id === selectedClass.courseId));
+    } else {
+      list = [];
+    }
+    
+    return list.filter((s) =>
+      s.name.toLowerCase().includes(query.toLowerCase()) ||
+      s.email.toLowerCase().includes(query.toLowerCase()) ||
+      s.displayId.toLowerCase().includes(query.toLowerCase()) ||
+      s.program.toLowerCase().includes(query.toLowerCase())
+    );
+  }, [students, query, selectedClass, isFaculty]);
 
   const dateKey = format(attDate, 'yyyy-MM-dd');
   const getMark = (studentId: string) => attendance[studentId]?.[dateKey];
   const setMark = (studentId: string, value: 'present' | 'absent') => {
-    setAttendance((prev) => ({
-      ...prev,
-      [studentId]: { ...(prev[studentId] || {}), [dateKey]: value },
-    }));
+    setAttendance((prev) => {
+      const updates = {
+        ...prev,
+        [studentId]: { ...(prev[studentId] || {}), [dateKey]: value },
+      };
+      scheduleAutoSave(updates);
+      return updates;
+    });
   };
 
-  const presentCount = filtered.filter((s) => getMark(s.studentId) === 'present').length;
-  const absentCount = filtered.filter((s) => getMark(s.studentId) === 'absent').length;
+  const presentCount = filtered.filter((s) => getMark(s.id) === 'present').length;
+  const absentCount = filtered.filter((s) => getMark(s.id) === 'absent').length;
 
   const openAttendanceFor = (s: any) => {
     setAttStudent(s);
     setOpenBigCalender(true);
   };
 
+  const { data: studentHistory } = useQuery({
+    queryKey: ['attendance-history', attStudent?.id],
+    queryFn: () => apiFetch('/attendance/student/' + attStudent?.id),
+    enabled: !!attStudent?.id,
+  });
+
   const calendarEvents = useMemo(() => {
-    if (!attStudent) return [];
-    const studentAtt = attendance[attStudent.studentId] || {};
-    return Object.entries(studentAtt).map(([dateStr, status]) => {
-      const [year, month, day] = dateStr.split('-').map(Number);
+    if (!studentHistory) return [];
+    return studentHistory.map((record: any) => {
+      const dateObj = new Date(record.date);
       return {
-        id: `${attStudent.studentId}-${dateStr}`,
-        title: status === 'present' ? 'Present' : 'Absent',
-        date: new Date(year, month - 1, day),
-        type: status as 'present' | 'absent',
+        id: `${attStudent?.id}-${dateObj.getTime()}`,
+        title: record.status.toUpperCase() === 'PRESENT' ? 'Present' : 'Absent',
+        date: dateObj,
+        type: record.status.toLowerCase(),
       };
     });
-  }, [attStudent, attendance]);
+  }, [studentHistory, attStudent]);
 
   const studentStats = useMemo(() => {
-    if (!attStudent) return { present: 0, absent: 0, total: 0, rate: 0 };
-    const studentAtt = attendance[attStudent.studentId] || {};
-    const values = Object.values(studentAtt);
-    const present = values.filter((v) => v === 'present').length;
-    const absent = values.filter((v) => v === 'absent').length;
-    const total = values.length;
+    if (!studentHistory) return { present: 0, absent: 0, total: 0, rate: 0 };
+    const present = studentHistory.filter((v: any) => v.status.toUpperCase() === 'PRESENT').length;
+    const absent = studentHistory.filter((v: any) => v.status.toUpperCase() === 'ABSENT').length;
+    const total = studentHistory.length;
     const rate = total > 0 ? Math.round((present / total) * 100) : 0;
     return { present, absent, total, rate };
-  }, [attStudent, attendance]);
+  }, [studentHistory]);
 
   return (
     <>
@@ -209,6 +311,21 @@ export function StudentsPage() {
             </PopoverContent>
           </Popover>
 
+          <div className="flex items-center gap-2 lg:ml-4">
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary w-48"
+            >
+              <option value="">-- Select Class --</option>
+              {classesOnDate.map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.subject.name} ({format(new Date(c.startTime), 'HH:mm')})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-center gap-2 lg:ml-auto">
             <Badge variant="outline" className="border-primary/30 h-8 text-primary bg-primary/5">
               <CheckCircle2 className="h-3 w-3 mr-1" /> Present {presentCount}
@@ -228,6 +345,16 @@ export function StudentsPage() {
             >
               Mark all present
             </button>
+            {selectedClassId && (
+              <button
+                onClick={() => triggerSave(attendance)}
+                disabled={saveAttendance.isPending}
+                className="inline-flex items-center gap-2 px-3 h-8 text-sm font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer ml-2"
+              >
+                <Save className="h-4 w-4" />
+                {saveAttendance.isPending ? 'Saving...' : 'Save Attendance'}
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -250,7 +377,7 @@ export function StudentsPage() {
             <div key={i} className="animate-pulse rounded-xl h-72 bg-muted" />
           ))
           : filtered.map((s) => {
-            const mark = getMark(s.studentId);
+            const mark = getMark(s.id);
             return (
               <Card
                 key={s.id}
@@ -300,7 +427,7 @@ export function StudentsPage() {
                   {/* Name + ID */}
                   <div className="mt-3">
                     <h3 className="font-semibold text-base leading-tight">{s.name}</h3>
-                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{s.studentId}</p>
+                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{s.displayId}</p>
                   </div>
 
                   {/* Info rows */}
@@ -328,7 +455,7 @@ export function StudentsPage() {
                     <button
                       onClick={() =>
                         handleAttendanceClick(
-                          s.studentId,
+                          s.id,
                           s.name,
                           'present'
                         )
@@ -345,7 +472,7 @@ export function StudentsPage() {
                     <button
                       onClick={() =>
                         handleAttendanceClick(
-                          s.studentId,
+                          s.id,
                           s.name,
                           'absent'
                         )
@@ -376,7 +503,9 @@ export function StudentsPage() {
         {!isLoading && filtered.length === 0 && (
           <Card className="col-span-full border-dashed">
             <CardContent className="py-12 text-center text-sm text-muted-foreground">
-              No students match your search.
+              {!selectedClassId 
+                ? 'Please select a class from the dropdown to take attendance.' 
+                : 'No students match your search.'}
             </CardContent>
           </Card>
         )}
@@ -434,15 +563,14 @@ export function StudentsPage() {
 
           if (pendingAction.action === 'all-present') {
             const updates: AttendanceMap = { ...attendance };
-
             filtered.forEach((s) => {
-              updates[s.studentId] = {
-                ...(updates[s.studentId] || {}),
+              updates[s.id] = {
+                ...(updates[s.id] || {}),
                 [dateKey]: 'present',
               };
             });
-
             setAttendance(updates);
+            scheduleAutoSave(updates);
           } else {
             setMark(
               pendingAction.studentId!,
