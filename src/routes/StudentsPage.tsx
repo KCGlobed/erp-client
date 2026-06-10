@@ -44,7 +44,7 @@ export function StudentsPage() {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
-  const saveTimeoutRef = useRef(null);
+  const saveTimeoutRef = useRef<any>(null);
 
   const [attendance, setAttendance] = useState<AttendanceMap>({});
   const [attDate, setAttDate] = useState<Date>(new Date());
@@ -75,7 +75,7 @@ export function StudentsPage() {
 
   const classesOnDate = useMemo(() => {
     if (!scheduleData?.classes) return [];
-    return scheduleData.classes.filter((c) => {
+    return scheduleData.classes.filter((c: any) => {
       return format(new Date(c.date), 'yyyy-MM-dd') === format(attDate, 'yyyy-MM-dd');
     });
   }, [scheduleData, attDate]);
@@ -90,7 +90,7 @@ export function StudentsPage() {
     }
   }, [classesOnDate, selectedClassId]);
 
-  const selectedClass = classesOnDate.find((c) => c.id === selectedClassId);
+  const selectedClass = classesOnDate.find((c: any) => c.id === selectedClassId);
 
   const { data: existingAttendance } = useQuery({
     queryKey: ['attendance', selectedClassId],
@@ -100,9 +100,9 @@ export function StudentsPage() {
 
   useEffect(() => {
     if (existingAttendance?.records && selectedClassId) {
-      const newMap = {};
+      const newMap: Record<string, any> = {};
       const dKey = format(attDate, 'yyyy-MM-dd');
-      existingAttendance.records.forEach((r) => {
+      existingAttendance.records.forEach((r: any) => {
         newMap[r.studentId] = { [dKey]: r.status.toLowerCase() };
       });
       setAttendance(newMap);
@@ -136,7 +136,7 @@ export function StudentsPage() {
       const status = dates[format(attDate, 'yyyy-MM-dd')];
       if (!status) return null;
       return { studentId, status: status.toUpperCase() };
-    }).filter(Boolean);
+    }).filter(Boolean) as { studentId: string; status: string }[];
     
     saveAttendance.mutate({
       date: attDate.toISOString(),
@@ -144,7 +144,7 @@ export function StudentsPage() {
     });
   };
 
-  const scheduleAutoSave = (updates) => {
+  const scheduleAutoSave = (updates: any) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       triggerSave(updates);
@@ -183,7 +183,7 @@ export function StudentsPage() {
 
   const handleAttendanceClick = (
     studentId: string,
-    studentName: string,
+    _studentName: string,
     action: 'present' | 'absent'
   ) => {
     setMark(studentId, action);
@@ -193,7 +193,7 @@ export function StudentsPage() {
   const filtered = useMemo(() => {
     let list = students;
     if (selectedClass) {
-      list = list.filter((s) => s.enrollments?.some((e) => e.course?.id === selectedClass.courseId));
+      list = list.filter((s) => s.enrollments?.some((e: any) => e.course?.id === selectedClass.courseId));
     } else {
       list = [];
     }
