@@ -4,6 +4,7 @@ import { Check, X, Save, AlertCircle } from 'lucide-react';
 import { apiFetch } from '../../lib/api';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import Skeleton from '../ui/skeleton';
 
 interface AttendanceModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
   const queryClient = useQueryClient();
   const [attendanceMap, setAttendanceMap] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Fetch all students for this faculty, then we will filter by courseId
   const { data: allStudents = [], isLoading: isLoadingStudents } = useQuery<any[]>({
@@ -54,6 +56,7 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
     }
 
     setAttendanceMap(initialMap);
+    setHasChanges(false);
   }, [isOpen, isLoadingStudents, isLoadingAttendance, existingAttendance, classStudents]);
 
   const saveAttendance = useMutation({
@@ -70,11 +73,24 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
 
   const handleSave = () => {
     setErrorMessage(null);
-    
+
     const records = Object.entries(attendanceMap).map(([studentId, status]) => ({
       studentId,
       status,
     }));
+
+    const setStatus = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
+      setAttendanceMap((prev) => {
+        if (prev[studentId] === status) return prev;
+
+        setHasChanges(true);
+
+        return {
+          ...prev,
+          [studentId]: status,
+        };
+      });
+    };
 
     const date = existingAttendance?.date ? existingAttendance.date : (classSchedule?.date || new Date().toISOString());
 
@@ -108,7 +124,20 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
         )}
 
         {isLoadingStudents || isLoadingAttendance ? (
-          <div className="p-8 text-center text-gray-500 text-sm">Loading students...</div>
+          <div className="overflow-y-auto pr-1 flex-1 space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50/50">
+                <div className="flex flex-col space-y-1.5 flex-1">
+                  <Skeleton className="h-4 w-1/3 rounded" />
+                  <Skeleton className="h-3 w-1/2 rounded" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-16 rounded-md" />
+                  <Skeleton className="h-8 w-16 rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : classStudents.length === 0 ? (
           <div className="p-8 text-center text-gray-500 text-sm">No students enrolled in this course.</div>
         ) : (
@@ -126,11 +155,10 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
                   <div className="flex gap-2">
                     <button
                       onClick={() => setStatus(student.id, 'PRESENT')}
-                      className={`flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${
-                        currentStatus === 'PRESENT'
+                      className={`flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${currentStatus === 'PRESENT'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
                           : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       <Check className={`w-3.5 h-3.5 ${currentStatus === 'PRESENT' ? 'text-emerald-500' : 'text-gray-400'}`} />
                       Present
@@ -138,11 +166,10 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
 
                     <button
                       onClick={() => setStatus(student.id, 'ABSENT')}
-                      className={`flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${
-                        currentStatus === 'ABSENT'
+                      className={`flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${currentStatus === 'ABSENT'
                           ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
                           : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       <X className={`w-3.5 h-3.5 ${currentStatus === 'ABSENT' ? 'text-rose-500' : 'text-gray-400'}`} />
                       Absent
@@ -160,7 +187,7 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saveAttendance.isPending || isLoadingStudents || classStudents.length === 0}
+            disabled={!hasChanges ||saveAttendance.isPending || isLoadingStudents || classStudents.length === 0}
             className="flex items-center gap-2"
           >
             {saveAttendance.isPending ? (

@@ -364,7 +364,7 @@ export function StudentsPage() {
               <button
                 onClick={() => triggerSave(attendance)}
                 disabled={saveAttendance.isPending}
-                className="inline-flex items-center gap-2 px-3 h-8 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer ml-2"
+                className="inline-flex items-center gap-2 px-3 h-8 text-xs mx:max-w-[180px] font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
               >
                 <Save className="h-4 w-4" />
                 {saveAttendance.isPending ? 'Saving...' : 'Save Attendance'}

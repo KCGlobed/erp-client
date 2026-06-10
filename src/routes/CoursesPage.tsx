@@ -8,6 +8,7 @@ import { Input } from '../components/ui/Input';
 import { Drawer } from '../components/ui/Drawer';
 import { Modal } from '../components/ui/Modal';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
+import Skeleton from '../components/ui/skeleton';
 
 export function CoursesPage() {
   const { user } = useAuthStore();
@@ -277,7 +278,36 @@ export function CoursesPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-20 text-sm text-gray-500">Loading courses…</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card
+              key={i}
+              className="border border-gray-100 flex flex-col justify-between h-[250px]"
+            >
+              <CardHeader className="pb-4 flex-1 space-y-3">
+                <div className="flex justify-between items-center">
+                  <Skeleton className="h-5 w-16 rounded" />
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </div>
+                <Skeleton className="h-6 w-3/4 rounded mt-2" />
+                <div className="space-y-1.5 mt-2">
+                  <Skeleton className="h-4 w-full rounded" />
+                  <Skeleton className="h-4 w-5/6 rounded" />
+                </div>
+              </CardHeader>
+              <CardContent className="pb-4 space-y-3">
+                <div className="flex gap-4">
+                  <Skeleton className="h-4 w-12 rounded" />
+                  <Skeleton className="h-4 w-20 rounded" />
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-50">
+                  <Skeleton className="h-3.5 w-24 rounded" />
+                  <Skeleton className="h-3.5 w-8 rounded" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : filteredCourses.length === 0 ? (
         <div className="text-center py-20 text-sm text-gray-500">No courses found matching "{search}"</div>
       ) : (
@@ -296,11 +326,10 @@ export function CoursesPage() {
                       {course.code}
                     </span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        course.status === 'ACTIVE'
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${course.status === 'ACTIVE'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-red-50 text-red-700 border border-red-200'
-                      }`}
+                        }`}
                     >
                       {course.status}
                     </span>
@@ -379,11 +408,10 @@ export function CoursesPage() {
                     <button
                       key={curr.id}
                       onClick={() => setSelectedCurriculumIndex(idx)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
-                        selectedCurriculumIndex === idx
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer ${selectedCurriculumIndex === idx
                           ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]'
                           : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
-                      }`}
+                        }`}
                     >
                       {curr.version} {curr.isActive && '●'}
                     </button>
