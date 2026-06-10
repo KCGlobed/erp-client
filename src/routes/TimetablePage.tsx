@@ -14,6 +14,8 @@ export function TimetablePage() {
   const queryClient = useQueryClient();
 
   const [currentDate, setCurrentDate] = useState(new Date(2026, 5, 1)); // Default to June 2026 (matching seeded data)
+  const [view, setView] = useState<'day' | 'week' | 'month' | 'year'>('month');
+  const [selectedTimelineEvent, setSelectedTimelineEvent] = useState<any | null>(null);
 
   // Drawer/Modal States
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
@@ -251,16 +253,36 @@ export function TimetablePage() {
     });
   };
 
-  // Calendar calculation functions
+  // Calendar calculation functions & view management helpers
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const prevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
+  const handlePrev = () => {
+    if (view === 'day') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1));
+    } else if (view === 'week') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7));
+    } else if (view === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    } else if (view === 'year') {
+      setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1));
+    }
   };
 
-  const nextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
+  const handleNext = () => {
+    if (view === 'day') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1));
+    } else if (view === 'week') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7));
+    } else if (view === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    } else if (view === 'year') {
+      setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1));
+    }
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date());
   };
 
   const monthNames = [
@@ -268,10 +290,44 @@ export function TimetablePage() {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
+  const getStartOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day; // adjust when day is Sunday
+    return new Date(d.setDate(diff));
+  };
+
+  const getEndOfWeek = (date: Date) => {
+    const start = getStartOfWeek(date);
+    return new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  };
+
+  const getDayTitle = (date: Date) => {
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const getWeekTitle = (date: Date) => {
+    const start = getStartOfWeek(date);
+    const end = getEndOfWeek(date);
+    const startOpt: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    const endOpt: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+    if (start.getFullYear() !== end.getFullYear()) {
+      startOpt.year = 'numeric';
+    }
+    return `${start.toLocaleDateString('en-US', startOpt)} – ${end.toLocaleDateString('en-US', endOpt)}`;
+  };
+
+  const getHeaderTitle = () => {
+    if (view === 'day') return getDayTitle(currentDate);
+    if (view === 'week') return getWeekTitle(currentDate);
+    if (view === 'month') return `${monthNames[month]} ${year}`;
+    return `${year}`;
+  };
+
   const firstDayIndex = new Date(year, month, 1).getDay();
   const numDays = new Date(year, month + 1, 0).getDate();
 
-  // Create grid cells
+  // Create grid cells for Month View
   const daysArray: (Date | null)[] = [];
   for (let i = 0; i < firstDayIndex; i++) {
     daysArray.push(null);
@@ -284,6 +340,473 @@ export function TimetablePage() {
     return d1.getFullYear() === d2.getFullYear() &&
       d1.getMonth() === d2.getMonth() &&
       d1.getDate() === d2.getDate();
+  };
+  const renderDayView = () => {
+    const dayEvents = getEventsForDay(currentDate);
+    const holidays = dayEvents.filter((ev) => ev.itemType === 'holiday');
+    const timedEvents = dayEvents.filter((ev) => ev.itemType !== 'holiday');
+
+    const hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+
+    const getEventsStartingInHour = (hr: number) => {
+      return timedEvents.filter((ev) => {
+        if (!ev.startTime) return false;
+        const d = new Date(ev.startTime);
+        return d.getHours() === hr;
+      });
+    };
+
+    const formatHour = (hr: number) => {
+      if (hr === 0) return '12 AM';
+      if (hr === 12) return '12 PM';
+      const ampm = hr >= 12 ? 'PM' : 'AM';
+      const h = hr % 12 === 0 ? 12 : hr % 12;
+      return `${h} ${ampm}`;
+    };
+
+    // Mini Calendar Calculations
+    const miniYear = currentDate.getFullYear();
+    const miniMonth = currentDate.getMonth();
+    const miniFirstDayIndex = new Date(miniYear, miniMonth, 1).getDay();
+    const miniNumDays = new Date(miniYear, miniMonth + 1, 0).getDate();
+
+    const prevMonthNumDays = new Date(miniYear, miniMonth, 0).getDate();
+    const miniDaysArray: { date: Date; isCurrentMonth: boolean }[] = [];
+
+    for (let i = miniFirstDayIndex - 1; i >= 0; i--) {
+      miniDaysArray.push({
+        date: new Date(miniYear, miniMonth - 1, prevMonthNumDays - i),
+        isCurrentMonth: false,
+      });
+    }
+    for (let i = 1; i <= miniNumDays; i++) {
+      miniDaysArray.push({
+        date: new Date(miniYear, miniMonth, i),
+        isCurrentMonth: true,
+      });
+    }
+    const remainingCells = 42 - miniDaysArray.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      miniDaysArray.push({
+        date: new Date(miniYear, miniMonth + 1, i),
+        isCurrentMonth: false,
+      });
+    }
+
+
+    return (
+      <div className="space-y-6 bg-white border border-gray-150 rounded-xl shadow-sm overflow-hidden">
+
+        <div className=" border-gray-100">
+          <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div
+              className="grid min-w-[2400px] border border-gray-100 rounded-xl divide-x divide-y divide-gray-100 bg-gray-50/20"
+              style={{
+                gridTemplateColumns: 'repeat(24, minmax(100px, 1fr))',
+                gridTemplateRows: 'auto 380px',
+              }}
+            >
+              {/* Header Columns 1-24: Hour Headers */}
+              {hours.map((hr, hrIdx) => (
+                <div
+                  key={`header-${hr}`}
+                  className="p-3 text-center border-b border-r border-gray-100 bg-gray-50/50 font-bold text-xs text-gray-400 select-none flex items-center justify-center"
+                  style={{ gridColumn: hrIdx + 1, gridRow: 1 }}
+                >
+                  {formatHour(hr)}
+                </div>
+              ))}
+
+              {/* Row 2, Columns 1-24: Hour Cells / Holiday Span */}
+              {holidays.length > 0 ? (
+                <div
+                  className="p-2 border-r border-gray-100 flex items-center justify-start bg-transparent h-[400px]"
+                  style={{ gridColumn: '1 / span 24', gridRow: 2 }}
+                >
+                  {holidays.map((h, hIdx) => (
+                    <div
+                      key={hIdx}
+                      className="w-full h-full flex flex-col items-start justify-center text-xs font-bold text-rose-700 p-3 text-left"
+                    >
+                      <span className="block mb-1 text-[9px] text-rose-400 uppercase tracking-widest font-extrabold">holiday</span>
+                      <span className="leading-snug text-sm">{h.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                hours.map((hr, hrIdx) => {
+                  const hourEvents = getEventsStartingInHour(hr);
+                  return (
+                    <div
+                      key={`cell-${hr}`}
+                      className="p-2 border-r border-gray-100 flex flex-col justify-start gap-1 h-[380px] bg-white overflow-y-auto"
+                      style={{ gridColumn: hrIdx + 1, gridRow: 2 }}
+                    >
+                      {hourEvents.length > 0 ? (
+                        hourEvents.map((ev, evIdx) => {
+                          let colorClass = 'bg-blue-50 text-blue-700 border-blue-100';
+                          if (ev.itemType === 'holiday') colorClass = 'bg-rose-50 text-rose-700 border-rose-100';
+                          if (ev.itemType === 'exam') colorClass = 'bg-purple-50 text-purple-700 border-purple-100';
+                          if (ev.itemType === 'event') colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+
+                          const isSelected = selectedTimelineEvent?.id === ev.id && selectedTimelineEvent?.itemType === ev.itemType;
+
+                          return (
+                            <div
+                              key={evIdx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTimelineEvent(ev);
+                              }}
+                              className={`text-[9px] font-medium leading-tight truncate px-1 py-0.5 rounded border cursor-pointer hover:opacity-80 transition-all ${colorClass} ${isSelected ? 'ring-2 ring-[var(--primary)]' : ''
+                                }`}
+                              title={`${ev.subject?.name || ev.name || ev.title}${ev.room ? ` (Room ${ev.room})` : ''}`}
+                            >
+                              {ev.subject?.name || ev.name || ev.title}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex flex-col justify-between h-full py-4 opacity-40">
+                          <div className="border-b border-dashed border-gray-250 w-full" />
+                          <div className="border-b border-dashed border-gray-250 w-full" />
+                          <div className="border-b border-dashed border-gray-250 w-full" />
+                          <div className="border-b border-dashed border-gray-250 w-full" />
+                          <div className="border-b border-dashed border-gray-250 w-full" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section: Details and Mini-Calendar */}
+
+      </div>
+    );
+  };
+
+  const renderWeekView = () => {
+    const startOfWeek = getStartOfWeek(currentDate);
+    const weekDays = Array.from({ length: 7 }, (_, i) => new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + i));
+    const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const hours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+
+    const getEventsStartingInHourForDay = (day: Date, hr: number) => {
+      const dayEvents = getEventsForDay(day);
+      const timedEvents = dayEvents.filter((ev) => ev.itemType !== 'holiday');
+      return timedEvents.filter((ev) => {
+        if (!ev.startTime) return false;
+        const d = new Date(ev.startTime);
+        return d.getHours() === hr;
+      });
+    };
+
+    const formatHour = (hr: number) => {
+      if (hr === 12) return 'Midday';
+      const ampm = hr >= 12 ? 'PM' : 'AM';
+      const h = hr % 12 === 0 ? 12 : hr % 12;
+      return `${h} ${ampm}`;
+    };
+
+    return (
+      <div className="bg-white border border-gray-150 rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          {/* Scrollable weekly timeline grid layout */}
+          <div
+            className="grid min-w-[1000px] border border-gray-100 rounded-xl divide-x divide-y divide-gray-100 bg-gray-50/20"
+            style={{
+              gridTemplateColumns: '100px repeat(7, minmax(120px, 1fr))',
+              gridTemplateRows: `auto repeat(${hours.length}, minmax(60px, auto))`
+            }}
+          >
+            {/* Header Column 1: Time label header */}
+            <div
+              className="p-3 font-bold text-xs text-gray-400 select-none bg-gray-50/50 flex items-center justify-center border-b border-gray-100"
+              style={{ gridColumn: 1, gridRow: 1 }}
+            >
+              Time
+            </div>
+
+            {/* Header Columns 2-8: Day Headers */}
+            {weekDays.map((day, dIdx) => {
+              const isToday = isSameDay(day, new Date());
+              const isSelected = isSameDay(day, currentDate);
+              return (
+                <div
+                  key={day.toISOString()}
+                  onClick={() => {
+                    setCurrentDate(day);
+                  }}
+                  className={`p-3 text-center border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center ${isToday ? 'bg-amber-50/30' : isSelected ? 'bg-blue-50/20' : 'bg-gray-50/50'
+                    }`}
+                  style={{ gridColumn: dIdx + 2, gridRow: 1 }}
+                >
+                  <span className="text-[10px] font-extrabold text-gray-500 block uppercase tracking-wider">
+                    {dayNamesShort[dIdx]}
+                  </span>
+                  <span
+                    className={`text-sm font-black inline-flex items-center justify-center w-7 h-7 rounded-full mt-1 ${isToday
+                        ? 'bg-[var(--primary)] text-white'
+                        : isSelected
+                          ? 'bg-blue-100 text-blue-800 font-bold'
+                          : 'text-gray-700'
+                      }`}
+                  >
+                    {day.getDate()}
+                  </span>
+                </div>
+              );
+            })}
+
+            {/* Hourly Rows */}
+            {hours.flatMap((hr, hrIdx) => {
+              const rowIdx = hrIdx + 2;
+
+              // Hour Label Cell (Column 1)
+              const hourLabelCell = (
+                <div
+                  key={`hr-${hr}`}
+                  className="p-3 font-bold text-xs text-gray-400 select-none flex items-center justify-center bg-gray-50/30 border-b border-gray-100"
+                  style={{ gridColumn: 1, gridRow: rowIdx }}
+                >
+                  {formatHour(hr)}
+                </div>
+              );
+
+              // Grid cells for each day under this hour
+              const dayCells = weekDays.map((day, dIdx) => {
+                const colIdx = dIdx + 2;
+                const isToday = isSameDay(day, new Date());
+                const isSelected = isSameDay(day, currentDate);
+                const dayEvents = getEventsForDay(day);
+                const dayHolidays = dayEvents.filter((ev) => ev.itemType === 'holiday');
+
+                if (dayHolidays.length > 0) {
+                  // Render holiday card ONLY on the first hour row (starts at row 2 and spans all hours)
+                  if (hrIdx === 0) {
+                    return (
+                      <div
+                        key={`holiday-${day.toISOString()}`}
+                        className={`p-2 border-b border-gray-100 flex items-center justify-center ${isToday ? 'bg-amber-50/10' : isSelected ? 'bg-blue-50/10' : 'bg-white'
+                          }`}
+                        style={{
+                          gridColumn: colIdx,
+                          gridRow: `2 / span ${hours.length}`
+                        }}
+                      >
+                        {dayHolidays.map((h, hIdx) => (
+                          <div
+                            key={hIdx}
+                            onClick={() => handleDayClick(day)}
+                            className="w-full h-full min-h-[180px] flex flex-col items-center justify-center text-xs font-bold text-rose-700 bg-transparent rounded-xl p-4 text-center shadow-sm cursor-pointer "
+                          >
+                            <span className="block mb-2 text-[9px] text-rose-400 uppercase tracking-widest font-extrabold">holiday</span>
+                            <span className="leading-snug">{h.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+                  // Skip rendering for subsequent rows
+                  return null;
+                }
+
+                // Regular time-day cell
+                const hourEvents = getEventsStartingInHourForDay(day, hr);
+                return (
+                  <div
+                    key={`cell-${day.toISOString()}-${hr}`}
+                    className={`p-2 border-b border-r border-gray-100 flex flex-col justify-center min-h-[60px] ${isToday ? 'bg-amber-50/10' : isSelected ? 'bg-blue-50/10' : 'bg-white'
+                      }`}
+                    style={{ gridColumn: colIdx, gridRow: rowIdx }}
+                  >
+                    {hourEvents.length > 0 ? (
+                      hourEvents.map((ev, evIdx) => {
+                        let colorClass = 'bg-blue-50 text-blue-700 border-blue-100';
+                        if (ev.itemType === 'holiday') colorClass = 'bg-rose-50 text-rose-700 border-rose-100';
+                        if (ev.itemType === 'exam') colorClass = 'bg-purple-50 text-purple-700 border-purple-100';
+                        if (ev.itemType === 'event') colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+
+                        return (
+                          <div
+                            key={evIdx}
+                            onClick={() => handleDayClick(day)}
+                            className={`text-[9px] font-medium leading-tight truncate px-1 py-0.5 rounded border cursor-pointer hover:opacity-80 transition-opacity ${colorClass}`}
+                            title={`${ev.subject?.name || ev.name || ev.title}${ev.room ? ` (Room ${ev.room})` : ''}`}
+                          >
+                            {ev.subject?.name || ev.name || ev.title}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // Visual placeholder dash line
+                      <div className="border-b border-dashed border-gray-100/80 w-full my-auto" />
+                    )}
+                  </div>
+                );
+              });
+
+              return [hourLabelCell, ...dayCells].filter(Boolean);
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMonthView = () => {
+    return (
+      <div className="bg-white border border-gray-150 rounded-xl overflow-hidden shadow-sm">
+        {/* Days of week labels */}
+        <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-150 text-center py-2 text-xs font-semibold text-gray-600">
+          <div>Sun</div>
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+        </div>
+        {/* Grid Cells */}
+        <div className="grid grid-cols-7 divide-x divide-y divide-gray-150 min-h-[480px]">
+          {daysArray.map((day, idx) => {
+            if (!day) {
+              return <div key={`empty-${idx}`} className="bg-gray-50/50" />;
+            }
+            const dayEvents = getEventsForDay(day);
+            const isToday = isSameDay(day, new Date());
+            return (
+              <div
+                key={day.toISOString()}
+                onClick={() => handleDayClick(day)}
+                className={`p-2 hover:bg-gray-50/80 transition-colors flex flex-col justify-between cursor-pointer min-h-[90px] ${isToday ? 'bg-amber-50/30' : ''
+                  }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs font-bold ${isToday ? 'bg-[var(--primary)] text-[var(--primary-foreground)] w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-700'
+                    }`}>
+                    {day.getDate()}
+                  </span>
+                </div>
+                <div className="space-y-1 mt-2">
+                  {dayEvents.slice(0, 3).map((ev: any, evIdx: number) => {
+                    let colorClass = 'bg-blue-50 text-blue-700 border-blue-100';
+                    if (ev.itemType === 'holiday') colorClass = 'bg-rose-50 text-rose-700 border-rose-100';
+                    if (ev.itemType === 'exam') colorClass = 'bg-purple-50 text-purple-700 border-purple-100';
+                    if (ev.itemType === 'event') colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+
+                    return (
+                      <div
+                        key={evIdx}
+                        className={`text-[9px] font-medium leading-tight truncate px-1 py-0.5 rounded border ${colorClass}`}
+                      >
+                        {ev.subject?.name || ev.name || ev.title}
+                      </div>
+                    );
+                  })}
+                  {dayEvents.length > 3 && (
+                    <div className="text-[8px] text-gray-400 font-semibold pl-1">
+                      + {dayEvents.length - 3} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderYearView = () => {
+    const months = Array.from({ length: 12 }, (_, i) => i);
+    const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {months.map((mIdx) => {
+          const firstDay = new Date(year, mIdx, 1).getDay();
+          const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+
+          // Build local array of cells for this month
+          const monthDays: (Date | null)[] = [];
+          for (let i = 0; i < firstDay; i++) {
+            monthDays.push(null);
+          }
+          for (let i = 1; i <= daysInMonth; i++) {
+            monthDays.push(new Date(year, mIdx, i));
+          }
+
+          return (
+            <div
+              key={mIdx}
+              className="bg-white border border-gray-150 rounded-xl p-3 shadow-sm flex flex-col justify-between"
+            >
+              <h3 className="text-xs font-bold text-gray-700 mb-2 border-b border-gray-100 pb-1.5 uppercase tracking-wide">
+                {monthNames[mIdx]}
+              </h3>
+
+              {/* Day Labels Header */}
+              <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-gray-400 mb-1">
+                {dayLabels.map((lbl, idx) => (
+                  <div key={idx}>{lbl}</div>
+                ))}
+              </div>
+
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {monthDays.map((day, dIdx) => {
+                  if (!day) {
+                    return <div key={`empty-${dIdx}`} className="h-5 w-5" />;
+                  }
+
+                  const dayEvents = getEventsForDay(day);
+                  const isToday = isSameDay(day, new Date());
+                  const hasEvents = dayEvents.length > 0;
+
+                  // Determine color class if it has events
+                  let dotColor = '';
+                  if (hasEvents) {
+                    const firstEv = dayEvents[0];
+                    if (firstEv.itemType === 'holiday') dotColor = 'bg-rose-500';
+                    else if (firstEv.itemType === 'exam') dotColor = 'bg-purple-500';
+                    else if (firstEv.itemType === 'event') dotColor = 'bg-emerald-500';
+                    else dotColor = 'bg-blue-500';
+                  }
+
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      onClick={() => {
+                        setCurrentDate(day);
+                        setView('day');
+                      }}
+                      className={`h-5 w-5 text-[10px] font-bold rounded-full flex flex-col items-center justify-center cursor-pointer transition-all relative hover:bg-gray-100 ${isToday
+                          ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-black'
+                          : hasEvents
+                            ? 'bg-blue-50/50 text-blue-700 font-bold'
+                            : 'text-gray-600'
+                        }`}
+                    >
+                      <span>{day.getDate()}</span>
+
+                      {/* Little event indicator dot */}
+                      {hasEvents && !isToday && (
+                        <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${dotColor}`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const isDateBetween = (date: Date, start: Date, end: Date) => {
@@ -351,98 +874,73 @@ export function TimetablePage() {
         </div>
       </div>
 
-      {/* Calendar navigation header */}
-      <div className="flex items-center justify-between mb-4 bg-white p-3 rounded-lg border border-gray-150 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={prevMonth}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <h2 className="text-md font-bold text-gray-800 w-36 text-center">
-            {monthNames[month]} {year}
+      {/* Calendar Controls & Navigation */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Navigation Controls */}
+          <div className="flex items-center bg-[#FEF2FD] border border-gray-200 rounded-lg p-0.5">
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white text-gray-600 rounded-md" onClick={handlePrev}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" className="h-8 px-3 text-xs font-semibold hover:bg-white text-gray-700 rounded-md border-x border-gray-200" onClick={handleToday}>
+              Today
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white text-gray-600 rounded-md" onClick={handleNext}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <h2 className="text-sm md:text-base font-bold text-gray-800 min-w-[140px] md:min-w-[180px] text-center md:text-left">
+            {getHeaderTitle()}
           </h2>
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={nextMonth}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
         </div>
-        <div className="flex flex-wrap gap-3 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
-            <span className="text-gray-600 font-medium">Classes</span>
+
+        {/* View Switcher Tabs & Legend */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+              <span className="text-gray-600 font-medium">Classes</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+              <span className="text-gray-600 font-medium">Holidays</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-purple-500 inline-block"></span>
+              <span className="text-gray-600 font-medium">Exams</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              <span className="text-gray-600 font-medium">Events</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
-            <span className="text-gray-600 font-medium">Holidays</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span>
-            <span className="text-gray-600 font-medium">Exams</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-            <span className="text-gray-600 font-medium">Events</span>
+
+          {/* Switcher Tabs */}
+          <div className="inline-flex p-0.5 bg-[#FEF2FD] border border-[#F5EDF5] rounded-xl gap-1">
+            {(['day', 'week', 'month', 'year'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${view === v
+                    ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+                    : 'text-gray-500 hover:text-gray-900'
+                  }`}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="bg-white border border-gray-150 rounded-xl overflow-hidden shadow-sm">
-        {/* Days of week labels */}
-        <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-150 text-center py-2 text-xs font-semibold text-gray-600">
-          <div>Sun</div>
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-          <div>Sat</div>
-        </div>
-        {/* Grid Cells */}
-        <div className="grid grid-cols-7 divide-x divide-y divide-gray-150 min-h-[480px]">
-          {daysArray.map((day, idx) => {
-            if (!day) {
-              return <div key={`empty-${idx}`} className="bg-gray-50/50" />;
-            }
-            const dayEvents = getEventsForDay(day);
-            const isToday = isSameDay(day, new Date());
-            return (
-              <div
-                key={day.toISOString()}
-                onClick={() => handleDayClick(day)}
-                className={`p-2 hover:bg-gray-50/80 transition-colors flex flex-col justify-between cursor-pointer min-h-[90px] ${isToday ? 'bg-amber-50/30' : ''
-                  }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className={`text-xs font-bold ${isToday ? 'bg-[var(--primary)] text-[var(--primary-foreground)] w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-700'
-                    }`}>
-                    {day.getDate()}
-                  </span>
-                </div>
-                <div className="space-y-1 mt-2">
-                  {dayEvents.slice(0, 3).map((ev: any, evIdx: number) => {
-                    let colorClass = 'bg-blue-50 text-blue-700 border-blue-100';
-                    if (ev.itemType === 'holiday') colorClass = 'bg-rose-50 text-rose-700 border-rose-100';
-                    if (ev.itemType === 'exam') colorClass = 'bg-purple-50 text-purple-700 border-purple-100';
-                    if (ev.itemType === 'event') colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-100';
-
-                    return (
-                      <div
-                        key={evIdx}
-                        className={`text-[9px] font-medium leading-tight truncate px-1 py-0.5 rounded border ${colorClass}`}
-                      >
-                        {ev.subject?.name || ev.name || ev.title}
-                      </div>
-                    );
-                  })}
-                  {dayEvents.length > 3 && (
-                    <div className="text-[8px] text-gray-400 font-semibold pl-1">
-                      + {dayEvents.length - 3} more
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Calendar Body Rendering */}
+      <div className="mb-6">
+        {view === 'day' && renderDayView()}
+        {view === 'week' && renderWeekView()}
+        {view === 'month' && renderMonthView()}
+        {view === 'year' && renderYearView()}
       </div>
 
       {/* Date detail Modal */}
@@ -555,8 +1053,8 @@ export function TimetablePage() {
                   setErrorMessage(null);
                 }}
                 className={`py-2 px-3 border-b-2 font-medium capitalize transition-colors cursor-pointer ${schedulerTab === tab
-                    ? 'border-[var(--primary)] text-[var(--primary)]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
               >
                 {tab}
