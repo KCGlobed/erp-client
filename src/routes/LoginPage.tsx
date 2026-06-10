@@ -47,7 +47,7 @@ export function LoginPage() {
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(window.atob(base64));
 
-      setAuth(data.accessToken, {
+      setAuth(data.accessToken, data.refreshToken, {
         id: payload.sub,
         email: payload.email,
         roles: payload.roles,
