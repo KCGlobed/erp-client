@@ -112,7 +112,7 @@ export function StudentsPage() {
   }, [existingAttendance, selectedClassId, attDate]);
 
   const saveAttendance = useMutation({
-    mutationFn: async (payload) => {
+    mutationFn: async (payload: { date: string; records: { studentId: string; status: string }[] }) => {
       return apiFetch('/attendance/class/' + selectedClassId, {
         method: 'POST',
         body: JSON.stringify(payload),
