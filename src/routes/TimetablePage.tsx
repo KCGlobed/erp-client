@@ -514,7 +514,7 @@ export function TimetablePage() {
 
     return (
       <div className="bg-white border border-gray-150 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[420px] scrollbar-hide">
           {/* Scrollable weekly timeline grid layout */}
           <div
             className="grid min-w-[1000px] border border-gray-100 rounded-xl divide-x divide-y divide-gray-100 bg-gray-50/20"
@@ -660,7 +660,7 @@ export function TimetablePage() {
 
   const renderMonthView = () => {
     return (
-      <div className="bg-white border border-gray-150 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-150 rounded-xl overflow-y-auto scrollbar-hide max-h-[420px] shadow-sm">
         {/* Days of week labels */}
         <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-150 text-center py-2 text-xs font-semibold text-gray-600">
           <div>Sun</div>
@@ -727,7 +727,7 @@ export function TimetablePage() {
     const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 max-h-[420px] overflow-y-auto scrollbar-hide sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {months.map((mIdx) => {
           const firstDay = new Date(year, mIdx, 1).getDay();
           const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
