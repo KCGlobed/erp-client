@@ -514,7 +514,7 @@ export function TimetablePage() {
 
     return (
       <div className="bg-white border border-gray-150 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[420px] scrollbar-hide">
           {/* Scrollable weekly timeline grid layout */}
           <div
             className="grid min-w-[1000px] border border-gray-100 rounded-xl divide-x divide-y divide-gray-100 bg-gray-50/20"
@@ -550,10 +550,10 @@ export function TimetablePage() {
                   </span>
                   <span
                     className={`text-sm font-black inline-flex items-center justify-center w-7 h-7 rounded-full mt-1 ${isToday
-                        ? 'bg-[var(--primary)] text-white'
-                        : isSelected
-                          ? 'bg-blue-100 text-blue-800 font-bold'
-                          : 'text-gray-700'
+                      ? 'bg-[var(--primary)] text-white'
+                      : isSelected
+                        ? 'bg-blue-100 text-blue-800 font-bold'
+                        : 'text-gray-700'
                       }`}
                   >
                     {day.getDate()}
@@ -660,7 +660,7 @@ export function TimetablePage() {
 
   const renderMonthView = () => {
     return (
-      <div className="bg-white border border-gray-150 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-150 rounded-xl overflow-y-auto scrollbar-hide max-h-[420px] shadow-sm">
         {/* Days of week labels */}
         <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-150 text-center py-2 text-xs font-semibold text-gray-600">
           <div>Sun</div>
@@ -727,7 +727,7 @@ export function TimetablePage() {
     const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 max-h-[420px] overflow-y-auto scrollbar-hide sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {months.map((mIdx) => {
           const firstDay = new Date(year, mIdx, 1).getDay();
           const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
@@ -785,11 +785,11 @@ export function TimetablePage() {
                         setCurrentDate(day);
                         setView('day');
                       }}
-                      className={`h-5 w-5 text-[10px] font-bold rounded-full flex flex-col items-center justify-center cursor-pointer transition-all relative hover:bg-gray-100 ${isToday
-                          ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-black'
-                          : hasEvents
-                            ? 'bg-blue-50/50 text-blue-700 font-bold'
-                            : 'text-gray-600'
+                      className={`h-5 w-5 text-[10px] font-bold rounded-full flex flex-col items-center justify-center cursor-pointer transition-all relative ${isToday
+                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-black'
+                        : hasEvents
+                          ? 'bg-blue-50/50 text-blue-700 font-bold'
+                          : 'text-gray-600'
                         }`}
                     >
                       <span>{day.getDate()}</span>
@@ -883,16 +883,16 @@ export function TimetablePage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button variant="ghost" className="h-8 px-3 text-xs font-semibold hover:bg-white text-gray-700 rounded-md border-x border-gray-200" onClick={handleToday}>
-              Today
+              {getHeaderTitle()}
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white text-gray-600 rounded-md" onClick={handleNext}>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
 
-          <h2 className="text-sm md:text-base font-bold text-gray-800 min-w-[140px] md:min-w-[180px] text-center md:text-left">
+          {/* <h2 className="text-sm md:text-base font-bold text-gray-800 min-w-[140px] md:min-w-[180px] text-center md:text-left">
             {getHeaderTitle()}
-          </h2>
+          </h2> */}
         </div>
 
         {/* View Switcher Tabs & Legend */}
@@ -924,8 +924,8 @@ export function TimetablePage() {
                 key={v}
                 onClick={() => setView(v)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${view === v
-                    ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
-                    : 'text-gray-500 hover:text-gray-900'
+                  ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+                  : 'text-gray-500 hover:text-gray-900'
                   }`}
               >
                 {v.charAt(0).toUpperCase() + v.slice(1)}
@@ -988,17 +988,17 @@ export function TimetablePage() {
                       <div className="flex items-center gap-1"><User className="w-3 h-3" /> {ev.faculty?.firstName} {ev.faculty?.lastName}</div>
                       <div className="flex items-center gap-1 font-semibold text-gray-700">Cohort: {ev.cohort?.name}</div>
                       {ev.topic && <div className="col-span-2 mt-1 bg-white p-1 rounded border border-gray-100">Topic: {ev.topic}</div>}
-                      
+
                       {ev.facultyId === user?.id && (
-                        <div className="col-span-2 mt-2 border-t pt-2">
-                          <Button 
+                        <div className="flex flex-col items-end col-span-2 mt-2 border-t pt-2">
+                          <Button
                             onClick={() => {
                               setSelectedAttendanceClass(ev);
                               setAttendanceModalOpen(true);
-                            }} 
-                            size="sm" 
+                            }}
+                            size="sm"
                             variant="outline"
-                            className="w-full flex items-center justify-center gap-1 py-1 h-auto text-[10px]"
+                            className=" h-10 flex items-center justify-center gap-2 rounded-xl !bg-primary !text-white font-semibold shadow-sm hover:opacity-90 transition-all cursor-pointer "
                           >
                             <ClipboardCheck className="w-3 h-3" /> Take Attendance
                           </Button>

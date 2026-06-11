@@ -25,6 +25,7 @@ import { BigCalendar } from '../components/ui/BigCalendar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { cn } from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/configDialog';
+import Skeleton from '../components/ui/skeleton';
 
 // ─── Mock enrichment data ────────────────────────────────────────────────────
 const MOCK_PROGRAMS = ['B.Tech CSE', 'B.Sc Physics', 'MBA', 'B.Com (H)', 'B.Tech ECE', 'B.A English'];
@@ -137,7 +138,7 @@ export function StudentsPage() {
       if (!status) return null;
       return { studentId, status: status.toUpperCase() };
     }).filter(Boolean) as { studentId: string; status: string }[];
-    
+
     saveAttendance.mutate({
       date: attDate.toISOString(),
       records,
@@ -197,7 +198,7 @@ export function StudentsPage() {
     } else {
       list = [];
     }
-    
+
     return list.filter((s) =>
       s.name.toLowerCase().includes(query.toLowerCase()) ||
       s.email.toLowerCase().includes(query.toLowerCase()) ||
@@ -268,7 +269,21 @@ export function StudentsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Students</h1>
           <p className="text-sm text-muted-foreground">Browse student profiles and mark attendance for any date.</p>
         </div>
+
         <div className="flex items-center gap-2">
+          {/* ── Search ──────────────────────────────────────────────────────── */}
+          <div className="relative w-full min-w-[400px] max-w-xl">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+
+            <input
+              type="text"
+              placeholder="Search students by name, email, ID or program..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-md border border-border bg-background text-sm leading-none outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+
           <button className="inline-flex items-center gap-2 px-3 h-9 text-sm font-medium rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer">
             <Download className="h-4 w-4" /> Export
           </button>
@@ -296,7 +311,7 @@ export function StudentsPage() {
 
           <Popover>
             <PopoverTrigger asChild>
-              <button className="lg:ml-4 inline-flex items-center gap-2 px-3 h-9 text-sm font-medium rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer">
+              <button className="lg:ml-4 inline-flex items-center gap-2 px-3 h-9 text-sm font-medium rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer whitespace-nowrap">
                 <CalendarIcon className="h-4 w-4 text-primary" />
                 {format(attDate, 'EEEE, MMM d, yyyy')}
               </button>
@@ -327,11 +342,11 @@ export function StudentsPage() {
           </div>
 
           <div className="flex items-center gap-2 lg:ml-auto">
-            <Badge variant="outline" className="border-primary/30 h-8 text-primary bg-primary/5">
-              <CheckCircle2 className="h-3 w-3 mr-1" /> Present {presentCount}
+            <Badge variant="outline" className="border-primary/30 flex gap-1 h-8 text-primary text-xs bg-primary/5">
+              <CheckCircle2 className="h-3 w-4 mr-1" /> <span className="text-xs">Present</span> {presentCount}
             </Badge>
-            <Badge variant="outline" className="border-destructive/30 h-8 text-destructive bg-destructive/5">
-              <XCircle className="h-3 w-3 mr-1" /> Absent {absentCount}
+            <Badge variant="outline" className="border-destructive/30 flex gap-1 h-8 text-destructive bg-destructive/5">
+              <XCircle className="h-3 w-4 mr-1 text-xs" /> <span className="text-xs">Absent</span> {absentCount}
             </Badge>
             <button
               onClick={() => {
@@ -341,7 +356,7 @@ export function StudentsPage() {
 
                 setConfirmOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-3 h-8 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+              className="inline-flex shrink-0 items-center gap-2 px-3 h-8 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
             >
               Mark all present
             </button>
@@ -349,7 +364,7 @@ export function StudentsPage() {
               <button
                 onClick={() => triggerSave(attendance)}
                 disabled={saveAttendance.isPending}
-                className="inline-flex items-center gap-2 px-3 h-8 text-sm font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer ml-2"
+                className="inline-flex items-center gap-2 px-3 h-8 text-xs mx:max-w-[180px] font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
               >
                 <Save className="h-4 w-4" />
                 {saveAttendance.isPending ? 'Saving...' : 'Save Attendance'}
@@ -359,152 +374,168 @@ export function StudentsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Search ──────────────────────────────────────────────────────── */}
-      <div className="relative mb-4 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          placeholder="Search students by name, email, ID or program…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full h-10 pl-9 pr-4 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-        />
-      </div>
-
       {/* ── Cards grid ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-        {isLoading
-          ? Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-xl h-72 bg-muted" />
-          ))
-          : filtered.map((s) => {
-            const mark = getMark(s.id);
-            return (
-              <Card
-                key={s.id}
-                className="border-border/60 overflow-hidden group hover:shadow-md transition-all duration-300"
-              >
-                {/* Gradient banner */}
-                <div
-                  className="h-20 relative"
-                // style={{ background: 'var(--gradient-primary, linear-gradient(135deg,hsl(267,55%,52%),hsl(307,60%,62%)))' }}
-                >
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'absolute top-3 right-3 bg-white/95 backdrop-blur',
-                      s.status === 'Active' && 'border-primary/30 text-primary',
-                      s.status === 'On Leave' && 'border-amber-400/40 text-amber-700',
-                      s.status === 'Graduated' && 'border-muted-foreground/30 text-muted-foreground',
-                    )}
-                  >
-                    {s.status}
-                  </Badge>
+        {isLoading ? (
+          Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="border rounded-xl overflow-hidden bg-white"
+            >
+              <Skeleton className="h-20 w-full" />
+
+              <div className="px-5 pb-5 -mt-10">
+                <Skeleton className="h-20 w-20 rounded-2xl border-4 border-white" />
+
+                <div className="mt-4 space-y-2">
+                  <Skeleton className="h-5 w-40 rounded" />
+                  <Skeleton className="h-3 w-24 rounded" />
                 </div>
 
-                <CardContent className="px-5 pb-5 -mt-10">
-                  {/* Avatar row */}
-                  <div className="flex items-end justify-between">
-                    <img
-                      src={s.avatar}
-                      alt={s.name}
-                      className="h-20 w-20 rounded-2xl border-4 border-background object-cover bg-muted shadow-sm"
-                    />
-                    {mark && (
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'mb-1',
-                          mark === 'present'
-                            ? 'border-primary/30 text-primary bg-primary/5'
-                            : 'border-destructive/30 text-destructive bg-destructive/5',
-                        )}
-                      >
-                        {mark === 'present' ? 'Present' : 'Absent'} · {format(attDate, 'MMM d')}
-                      </Badge>
-                    )}
-                  </div>
+                <div className="mt-4 space-y-3">
+                  <Skeleton className="h-4 w-full rounded" />
+                  <Skeleton className="h-4 w-full rounded" />
+                  <Skeleton className="h-4 w-3/4 rounded" />
+                  <Skeleton className="h-4 w-1/2 rounded" />
+                </div>
 
-                  {/* Name + ID */}
-                  <div className="mt-3">
-                    <h3 className="font-semibold text-base leading-tight">{s.name}</h3>
-                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{s.displayId}</p>
-                  </div>
+                <div className="mt-5 flex gap-2">
+                  <Skeleton className="h-8 flex-1 rounded-md" />
+                  <Skeleton className="h-8 flex-1 rounded-md" />
+                  <Skeleton className="h-8 w-20 rounded-md" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : filtered.map((s) => {
+          const mark = getMark(s.id);
+          return (
+            <Card
+              key={s.id}
+              className="border-border/60 overflow-hidden group hover:shadow-md transition-all duration-300"
+            >
+              {/* Gradient banner */}
+              <div
+                className="h-20 relative"
+              // style={{ background: 'var(--gradient-primary, linear-gradient(135deg,hsl(267,55%,52%),hsl(307,60%,62%)))' }}
+              >
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'absolute top-3 right-3 bg-white/95 backdrop-blur',
+                    s.status === 'Active' && 'border-primary/30 text-primary',
+                    s.status === 'On Leave' && 'border-amber-400/40 text-amber-700',
+                    s.status === 'Graduated' && 'border-muted-foreground/30 text-muted-foreground',
+                  )}
+                >
+                  {s.status}
+                </Badge>
+              </div>
 
-                  {/* Info rows */}
-                  <div className="mt-4 space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <GraduationCap className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="truncate">{s.program} · Year {s.year} · Sec {s.section}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="truncate">{s.phone}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="truncate">{s.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="truncate">{s.city} · Guardian: {s.guardian}</span>
-                    </div>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="mt-4 pt-4 border-t flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        handleAttendanceClick(
-                          s.id,
-                          s.name,
-                          'present'
-                        )
-                      }
+              <CardContent className="px-5 pb-5 -mt-10">
+                {/* Avatar row */}
+                <div className="flex items-end justify-between">
+                  <img
+                    src={s.avatar}
+                    alt={s.name}
+                    className="h-20 w-20 rounded-2xl border-4 border-background object-cover bg-muted shadow-sm"
+                  />
+                  {mark && (
+                    <Badge
+                      variant="outline"
                       className={cn(
-                        'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
+                        'mb-1',
                         mark === 'present'
-                          ? 'bg-primary text-primary-foreground border-primary hover:opacity-90'
-                          : 'bg-background text-foreground border-border hover:bg-accent',
+                          ? 'border-primary/30 text-primary bg-primary/5'
+                          : 'border-destructive/30 text-destructive bg-destructive/5',
                       )}
                     >
-                      <CheckCircle2 className="h-4 w-4" /> Present
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleAttendanceClick(
-                          s.id,
-                          s.name,
-                          'absent'
-                        )
-                      }
-                      className={cn(
-                        'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
-                        mark === 'absent'
-                          ? 'bg-destructive text-white border-destructive hover:opacity-90'
-                          : 'bg-background text-foreground border-border hover:bg-accent',
-                      )}
-                    >
-                      <XCircle className="h-4 w-4" /> Absent
-                    </button>
-                    <button
-                      onClick={
-                        () => openAttendanceFor(s)
-                      }
-                      className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-semibold border border-border bg-background hover:bg-accent transition-colors cursor-pointer"
-                    >
-                      History
-                    </button>
+                      {mark === 'present' ? 'Present' : 'Absent'} · {format(attDate, 'MMM d')}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Name + ID */}
+                <div className="mt-3">
+                  <h3 className="font-semibold text-base leading-tight">{s.name}</h3>
+                  <p className="text-xs font-mono text-muted-foreground mt-0.5">{s.displayId}</p>
+                </div>
+
+                {/* Info rows */}
+                <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <GraduationCap className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate">{s.program} · Year {s.year} · Sec {s.section}</span>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate">{s.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate">{s.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate">{s.city} · Guardian: {s.guardian}</span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="mt-4 pt-4 border-t flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      handleAttendanceClick(
+                        s.id,
+                        s.name,
+                        'present'
+                      )
+                    }
+                    className={cn(
+                      'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
+                      mark === 'present'
+                        ? 'bg-primary text-primary-foreground border-primary hover:opacity-90'
+                        : 'bg-background text-foreground border-border hover:bg-accent',
+                    )}
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Present
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleAttendanceClick(
+                        s.id,
+                        s.name,
+                        'absent'
+                      )
+                    }
+                    className={cn(
+                      'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-semibold border transition-colors cursor-pointer',
+                      mark === 'absent'
+                        ? 'bg-destructive text-white border-destructive hover:opacity-90'
+                        : 'bg-background text-foreground border-border hover:bg-accent',
+                    )}
+                  >
+                    <XCircle className="h-4 w-4" /> Absent
+                  </button>
+                  <button
+                    onClick={
+                      () => openAttendanceFor(s)
+                    }
+                    className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-semibold border border-border bg-background hover:bg-accent transition-colors cursor-pointer"
+                  >
+                    History
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
 
         {!isLoading && filtered.length === 0 && (
           <Card className="col-span-full border-dashed">
             <CardContent className="py-12 text-center text-sm text-muted-foreground">
-              {!selectedClassId 
-                ? 'Please select a class from the dropdown to take attendance.' 
+              {!selectedClassId
+                ? 'Please select a class from the dropdown to take attendance.'
                 : 'No students match your search.'}
             </CardContent>
           </Card>

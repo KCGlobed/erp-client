@@ -1,7 +1,7 @@
 import { useAuthStore } from '../store/useAuthStore';
 
-const BASE_URL =location.host.includes('localhost')?'http://localhost:3000/api/v1':'https://erp-server-932479078084.europe-west1.run.app/api/v1';
-
+// const BASE_URL =location.host.includes('localhost')?'http://localhost:3000/api/v1':'https://erp-server-932479078084.europe-west1.run.app/api/v1';
+const BASE_URL='https://erp-server-932479078084.europe-west1.run.app/api/v1'
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
