@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -39,6 +39,7 @@ interface NavGroup {
 export function Sidebar({ collapsed }: SidebarProps) {
   const { user, clearAuth } = useAuthStore();
   const location = useLocation();
+  const Navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     Overview: true,
     People: true,
@@ -99,7 +100,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     {
       label: "Account",
       items: [
-        { title: "My Profile", url: "/profile", icon: UserCircle, reqRoles: ['FACULTY'] },
+        { title: "My Profile", url: "/profile", icon: UserCircle, reqRoles: ['FACULTY', 'STUDENT'] },
       ],
     },
   ];
@@ -230,7 +231,10 @@ export function Sidebar({ collapsed }: SidebarProps) {
               </span>
             </div>
             <button
-              onClick={() => clearAuth()}
+              onClick={() => {
+                clearAuth()
+                Navigate('/login')
+              }}
               title="Sign Out"
               className="p-1.5 rounded-md transition-colors opacity-70 hover:opacity-100 cursor-pointer"
               style={{ color: 'var(--sidebar-foreground)' }}
@@ -241,7 +245,10 @@ export function Sidebar({ collapsed }: SidebarProps) {
         ) : (
           <div className="flex w-full justify-center">
             <button
-              onClick={() => clearAuth()}
+              onClick={() => {
+                clearAuth()
+                Navigate('/login')
+              }}
               title="Sign Out"
               className="flex h-8 w-8 items-center justify-center rounded-md transition-colors opacity-70 hover:opacity-100 cursor-pointer"
               style={{ color: 'var(--sidebar-foreground)' }}

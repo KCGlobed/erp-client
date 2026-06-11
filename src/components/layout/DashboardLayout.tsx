@@ -23,7 +23,7 @@ const SEARCHABLE_ROUTES = [
   { title: "Roles", path: "/roles", icon: Shield, description: "Access control roles", keywords: ["security", "groups", "permissions"], reqRoles: ['SUPER_ADMIN'] },
   { title: "Permissions", path: "/permissions", icon: FileText, description: "Granular access permissions", keywords: ["security", "rights", "access"], reqRoles: ['SUPER_ADMIN'] },
   { title: "System Logs", path: "/logs", icon: FileText, description: "Audit logs and system activity", keywords: ["history", "events", "audit"], reqRoles: ['SUPER_ADMIN', 'ADMIN'] },
-  { title: "My Profile", path: "/profile", icon: UserCircle, description: "Faculty user profile", keywords: ["me", "account", "settings"], reqRoles: ['FACULTY'] },
+  { title: "My Profile", path: "/profile", icon: UserCircle, description: "Faculty user profile", keywords: ["me", "account", "settings"], reqRoles: ['FACULTY', 'STUDENT'] },
 ];
 
 export function DashboardLayout() {

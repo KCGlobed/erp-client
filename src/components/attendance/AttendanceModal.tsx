@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, X, Save, AlertCircle } from 'lucide-react';
 import { apiFetch } from '../../lib/api';
@@ -15,6 +15,7 @@ interface AttendanceModalProps {
 export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceModalProps) {
   const queryClient = useQueryClient();
   const [attendanceMap, setAttendanceMap] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
+  const [initialAttendanceMap, setInitialAttendanceMap] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -33,9 +34,11 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
   });
 
   // Filter students for the specific course
-  const classStudents = allStudents.filter((student) =>
-    student.enrollments?.some((enr: any) => enr.course.id === classSchedule?.courseId)
-  );
+  const classStudents = useMemo(() => {
+    return allStudents.filter((student) =>
+      student.enrollments?.some((enr: any) => enr.course.id === classSchedule?.courseId)
+    );
+  }, [allStudents, classSchedule?.courseId]);
 
   // Initialize the attendance map
   useEffect(() => {
@@ -56,6 +59,7 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
     }
 
     setAttendanceMap(initialMap);
+    setInitialAttendanceMap(initialMap);
     setHasChanges(false);
   }, [isOpen, isLoadingStudents, isLoadingAttendance, existingAttendance, classStudents]);
 
@@ -71,6 +75,28 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
     },
   });
 
+  const setStatus = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
+    setAttendanceMap((prev) => {
+      if (prev[studentId] === status) return prev;
+
+      const updated = {
+        ...prev,
+        [studentId]: status,
+      };
+
+      const changed = Object.keys(updated).some(
+        (id) => updated[id] !== initialAttendanceMap[id]
+      );
+
+      setHasChanges(changed);
+
+      return {
+        ...prev,
+        [studentId]: status,
+      };
+    });
+  };
+
   const handleSave = () => {
     setErrorMessage(null);
 
@@ -79,32 +105,12 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
       status,
     }));
 
-    const setStatus = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
-      setAttendanceMap((prev) => {
-        if (prev[studentId] === status) return prev;
-
-        setHasChanges(true);
-
-        return {
-          ...prev,
-          [studentId]: status,
-        };
-      });
-    };
-
-    const date = existingAttendance?.date ? existingAttendance.date : (classSchedule?.date || new Date().toISOString());
+    const date = new Date(classSchedule?.date || new Date()).toISOString();
 
     saveAttendance.mutate({
       date,
       records,
     });
-  };
-
-  const setStatus = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
-    setAttendanceMap((prev) => ({
-      ...prev,
-      [studentId]: status,
-    }));
   };
 
   if (!isOpen || !classSchedule) return null;
@@ -156,8 +162,8 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
                     <button
                       onClick={() => setStatus(student.id, 'PRESENT')}
                       className={`flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${currentStatus === 'PRESENT'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
-                          : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                        : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
                         }`}
                     >
                       <Check className={`w-3.5 h-3.5 ${currentStatus === 'PRESENT' ? 'text-emerald-500' : 'text-gray-400'}`} />
@@ -167,8 +173,8 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
                     <button
                       onClick={() => setStatus(student.id, 'ABSENT')}
                       className={`flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${currentStatus === 'ABSENT'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
-                          : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
+                        : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
                         }`}
                     >
                       <X className={`w-3.5 h-3.5 ${currentStatus === 'ABSENT' ? 'text-rose-500' : 'text-gray-400'}`} />
@@ -187,7 +193,7 @@ export function AttendanceModal({ isOpen, onClose, classSchedule }: AttendanceMo
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!hasChanges ||saveAttendance.isPending || isLoadingStudents || classStudents.length === 0}
+            disabled={!hasChanges || saveAttendance.isPending || isLoadingStudents || classStudents.length === 0}
             className="flex items-center gap-2"
           >
             {saveAttendance.isPending ? (

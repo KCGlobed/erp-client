@@ -7,17 +7,21 @@ import {
   MapPin,
   Save,
   AlertCircle,
-  Calendar,
+  Calendar as CalendarIcon,
   Lock,
   Bell,
   Check,
   Edit2,
   X,
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { Card, CardContent } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
+import { Calendar } from '../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import Skeleton from '../components/ui/skeleton';
 
 // Helper to format ISO date string to YYYY-MM-DD
 const formatDateForInput = (dateStr: string | null | undefined) => {
@@ -34,7 +38,7 @@ interface ExperienceItem {
   to: string;
 }
 
-export function StudentsProfilePage() {
+export function StudentProfilePage() {
   const { user: authUser } = useAuthStore();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'personal' | 'account' | 'security' | 'notifications'>('personal');
@@ -44,7 +48,6 @@ export function StudentsProfilePage() {
 
   const [form, setForm] = useState({
     firstName: '',
-    middleName: '',
     lastName: '',
     gender: '',
     profilePhotoUrl: '',
@@ -58,12 +61,37 @@ export function StudentsProfilePage() {
     dateOfBirth: '',
     dateOfJoining: '',
     experience: [] as ExperienceItem[],
+    parentGuardianName: '',
+    relationship: '',
+    specifyRelationship: '',
+    parentGuardianPhoneNumber: '',
+    parentGuardianEmailId: '',
+    nationality: '',
+    state: '',
+    city: '',
+    pinCode: '',
+    completeAddress: '',
+    class10YearOfPassing: '',
+    class10GradeType: '',
+    class10Score: '',
+    class10MediumOfInstruction: '',
+    class12YearOfPassing: '',
+    class12GradeType: '',
+    class12Score: '',
+    class12MediumOfInstruction: '',
+    ugStatus: '',
+    ugGradeType: '',
+    ugScore: '',
+    ugInstitutionName: '',
+    ugMediumOfInstruction: '',
+    hasHigherQualification: false,
+    higherQualification: '',
   });
 
   // ── Fetch Profile ────────────────────────────────────────────────────────
   const { data, isLoading } = useQuery({
-    queryKey: ['faculty-profile'],
-    queryFn: () => apiFetch('/faculty-profile/me'),
+    queryKey: ['student-profile'],
+    queryFn: () => apiFetch('/student-profile/me'),
   });
 
   useEffect(() => {
@@ -91,7 +119,6 @@ export function StudentsProfilePage() {
     setForm({
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
-      middleName: data.profile?.middleName ?? '',
       gender: data.profile?.gender ?? '',
       profilePhotoUrl: data.profile?.profilePhotoUrl ?? '',
       personalEmail: data.profile?.personalEmail ?? '',
@@ -104,13 +131,38 @@ export function StudentsProfilePage() {
       dateOfBirth: formatDateForInput(data.profile?.dateOfBirth),
       dateOfJoining: formatDateForInput(data.profile?.dateOfJoining),
       experience: parsedExperience,
+      parentGuardianName: data.profile?.parentGuardianName ?? '',
+      relationship: data.profile?.relationship ?? '',
+      specifyRelationship: data.profile?.specifyRelationship ?? '',
+      parentGuardianPhoneNumber: data.profile?.parentGuardianPhoneNumber ?? '',
+      parentGuardianEmailId: data.profile?.parentGuardianEmailId ?? '',
+      nationality: data.profile?.nationality ?? '',
+      state: data.profile?.state ?? '',
+      city: data.profile?.city ?? '',
+      pinCode: data.profile?.pinCode ?? '',
+      completeAddress: data.profile?.completeAddress ?? '',
+      class10YearOfPassing: data.profile?.class10YearOfPassing ?? '',
+      class10GradeType: data.profile?.class10GradeType ?? '',
+      class10Score: data.profile?.class10Score ?? '',
+      class10MediumOfInstruction: data.profile?.class10MediumOfInstruction ?? '',
+      class12YearOfPassing: data.profile?.class12YearOfPassing ?? '',
+      class12GradeType: data.profile?.class12GradeType ?? '',
+      class12Score: data.profile?.class12Score ?? '',
+      class12MediumOfInstruction: data.profile?.class12MediumOfInstruction ?? '',
+      ugStatus: data.profile?.ugStatus ?? '',
+      ugGradeType: data.profile?.ugGradeType ?? '',
+      ugScore: data.profile?.ugScore ?? '',
+      ugInstitutionName: data.profile?.ugInstitutionName ?? '',
+      ugMediumOfInstruction: data.profile?.ugMediumOfInstruction ?? '',
+      hasHigherQualification: data.profile?.hasHigherQualification ?? false,
+      higherQualification: data.profile?.higherQualification ?? '',
     });
   }, [data]);
 
   // ── Mutations ────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { firstName, lastName, middleName } = form;
+      const { firstName, lastName } = form;
 
       // Update base user name (First Name, Last Name)
       if (firstName !== data?.firstName || lastName !== data?.lastName) {
@@ -120,18 +172,10 @@ export function StudentsProfilePage() {
         });
       }
 
-      // Update middleName in faculty profile
-      const profilePayload = {
-        middleName: middleName || null,
-      };
 
-      return apiFetch('/faculty-profile/me', {
-        method: 'PATCH',
-        body: JSON.stringify(profilePayload),
-      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['faculty-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['student-profile'] });
       setEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -157,16 +201,93 @@ export function StudentsProfilePage() {
     setEditing(false);
   };
 
-  const fullName = [form.firstName, form.middleName, form.lastName].filter(Boolean).join(' ');
+  const fullName = [form.firstName, form.lastName].filter(Boolean).join(' ');
   const avatar =
     form.profilePhotoUrl ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${form.firstName}_${form.lastName}`;
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="animate-pulse rounded-2xl h-44 bg-neutral-100" />
-        <div className="animate-pulse rounded-2xl h-96 bg-neutral-100" />
+      <div className="max-w-6xl mx-auto px-4 py-8 font-sans space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Skeleton className="h-4 w-12 rounded animate-pulse bg-neutral-100" />
+              <Skeleton className="h-4 w-4 rounded animate-pulse bg-neutral-100" />
+              <Skeleton className="h-4 w-20 rounded animate-pulse bg-neutral-100" />
+            </div>
+            <Skeleton className="h-8 w-48 rounded-lg animate-pulse bg-neutral-100" />
+            <Skeleton className="h-4 w-80 rounded animate-pulse bg-neutral-100" />
+          </div>
+          <Skeleton className="h-9 w-32 rounded-lg animate-pulse bg-neutral-100" />
+        </div>
+
+        {/* Hero Card Skeleton */}
+        <div className="bg-white rounded-2xl border border-neutral-100 p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center md:items-start animate-fade-in">
+          <Skeleton className="w-24 h-24 rounded-2xl shrink-0 animate-pulse bg-neutral-100" />
+          <div className="flex-1 space-y-3 w-full">
+            <div className="flex flex-col md:flex-row md:items-center gap-2">
+              <Skeleton className="h-7 w-48 rounded-lg animate-pulse bg-neutral-100" />
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-16 rounded-full animate-pulse bg-neutral-100" />
+                <Skeleton className="h-5 w-16 rounded-full animate-pulse bg-neutral-100" />
+              </div>
+            </div>
+            <Skeleton className="h-4 w-32 rounded animate-pulse bg-neutral-100" />
+            <div className="flex flex-wrap gap-4 pt-2">
+              <Skeleton className="h-4 w-36 rounded animate-pulse bg-neutral-100" />
+              <Skeleton className="h-4 w-28 rounded animate-pulse bg-neutral-100" />
+              <Skeleton className="h-4 w-40 rounded animate-pulse bg-neutral-100" />
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs Skeleton */}
+        <div className="flex gap-2 border-b border-neutral-200 pb-px overflow-x-auto">
+          <Skeleton className="h-10 w-28 rounded-t-lg shrink-0 animate-pulse bg-neutral-100" />
+          <Skeleton className="h-10 w-28 rounded-t-lg shrink-0 animate-pulse bg-neutral-100" />
+          <Skeleton className="h-10 w-28 rounded-t-lg shrink-0 animate-pulse bg-neutral-100" />
+          <Skeleton className="h-10 w-28 rounded-t-lg shrink-0 animate-pulse bg-neutral-100" />
+        </div>
+
+        {/* Card Content Skeleton */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-neutral-100 p-6 shadow-sm space-y-6 animate-fade-in">
+            <div className="border-b border-neutral-100 pb-4">
+              <Skeleton className="h-6 w-40 rounded animate-pulse bg-neutral-100" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-20 rounded animate-pulse bg-neutral-100" />
+                <Skeleton className="h-10 w-full rounded-lg animate-pulse bg-neutral-100" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-20 rounded animate-pulse bg-neutral-100" />
+                <Skeleton className="h-10 w-full rounded-lg animate-pulse bg-neutral-100" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-20 rounded animate-pulse bg-neutral-100" />
+                <Skeleton className="h-10 w-full rounded-lg animate-pulse bg-neutral-100" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-20 rounded animate-pulse bg-neutral-100" />
+                <Skeleton className="h-10 w-full rounded-lg animate-pulse bg-neutral-100" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-20 rounded animate-pulse bg-neutral-100" />
+                <Skeleton className="h-10 w-full rounded-lg animate-pulse bg-neutral-100" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-20 rounded animate-pulse bg-neutral-100" />
+                <Skeleton className="h-10 w-full rounded-lg animate-pulse bg-neutral-100" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -242,7 +363,7 @@ export function StudentsProfilePage() {
             {/* Title / Role details */}
             <div className="flex-1 text-center md:text-left min-w-0">
               <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1 justify-center md:justify-start">
-                <h1 className="text-xl font-bold text-neutral-900 truncate">{fullName || 'Faculty Profile'}</h1>
+                <h1 className="text-xl font-bold text-neutral-900 truncate">{fullName || 'Student Profile'}</h1>
                 <div className="flex gap-2 justify-center md:justify-start shrink-0">
                   <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-purple-100 text-purple-700 bg-purple-50">
                     Verified
@@ -254,7 +375,7 @@ export function StudentsProfilePage() {
               </div>
 
               <p className="text-sm text-neutral-500 mb-3">
-                {form.experience[0]?.role || 'Faculty'} · {form.experience[0]?.dept || 'Department'}
+                {form.experience[0]?.role || 'Student'} · {form.experience[0]?.dept || 'Department'}
               </p>
 
               <div className="flex flex-wrap justify-center md:justify-start gap-x-5 gap-y-2 text-xs text-neutral-500">
@@ -324,21 +445,6 @@ export function StudentsProfilePage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Middle Name</label>
-                    <input
-                      type="text"
-                      name="middleName"
-                      value={form.middleName}
-                      onChange={handleChange}
-                      disabled={!editing}
-                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
-                        !editing
-                          ? 'bg-neutral-50 border-neutral-100 text-neutral-500 cursor-default'
-                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
-                      }`}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Last Name</label>
                     <input
                       type="text"
@@ -355,42 +461,127 @@ export function StudentsProfilePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Gender</label>
-                    <select
-                      name="gender"
-                      value={form.gender}
-                      onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
-                      <option value="OTHER">Other</option>
-                    </select>
+                    {!editing ? (
+                      <input
+                        type="text"
+                        value={form.gender || ''}
+                        disabled={true}
+                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
+                      />
+                    ) : (
+                      <select
+                        name="gender"
+                        value={form.gender}
+                        onChange={handleChange}
+                        className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 appearance-none w-full cursor-pointer"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Date of Birth</label>
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={form.dateOfBirth}
-                      onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
-                    />
+                    {!editing ? (
+                      <input
+                        type="text"
+                        value={form.dateOfBirth || ''}
+                        disabled={true}
+                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-555 text-sm font-medium outline-none cursor-default"
+                      />
+                    ) : (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-left flex items-center justify-between cursor-pointer w-full"
+                          >
+                            <span>
+                              {form.dateOfBirth
+                                ? format(new Date(form.dateOfBirth), 'PPP')
+                                : 'Select Date of Birth'}
+                            </span>
+                            <CalendarIcon className="h-4 w-4 text-neutral-400" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-white border border-neutral-200 rounded-lg shadow-lg z-50" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={form.dateOfBirth ? new Date(form.dateOfBirth) : undefined}
+                            onSelect={(d) => {
+                              if (d) {
+                                setForm((prev) => ({
+                                  ...prev,
+                                  dateOfBirth: format(d, 'yyyy-MM-dd'),
+                                }));
+                              }
+                            }}
+                            className="p-3 bg-white"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Date of Joining</label>
+                    {!editing ? (
+                      <input
+                        type="text"
+                        value={form.dateOfJoining || ''}
+                        disabled={true}
+                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-555 text-sm font-medium outline-none cursor-default"
+                      />
+                    ) : (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-left flex items-center justify-between cursor-pointer w-full"
+                          >
+                            <span>
+                              {form.dateOfJoining
+                                ? format(new Date(form.dateOfJoining), 'PPP')
+                                : 'Select Date of Joining'}
+                            </span>
+                            <CalendarIcon className="h-4 w-4 text-neutral-400" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-white border border-neutral-200 rounded-lg shadow-lg z-50" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={form.dateOfJoining ? new Date(form.dateOfJoining) : undefined}
+                            onSelect={(d) => {
+                              if (d) {
+                                setForm((prev) => ({
+                                  ...prev,
+                                  dateOfJoining: format(d, 'yyyy-MM-dd'),
+                                }));
+                              }
+                            }}
+                            className="p-3 bg-white"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Nationality</label>
                     <input
-                      type="date"
-                      name="dateOfJoining"
-                      value={form.dateOfJoining}
+                      type="text"
+                      name="nationality"
+                      value={form.nationality}
                       onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-550 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                 </div>
@@ -420,8 +611,12 @@ export function StudentsProfilePage() {
                       name="personalEmail"
                       value={form.personalEmail}
                       onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -431,8 +626,12 @@ export function StudentsProfilePage() {
                       name="mobileNumber"
                       value={form.mobileNumber}
                       onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -442,8 +641,12 @@ export function StudentsProfilePage() {
                       name="alternateMobileNumber"
                       value={form.alternateMobileNumber}
                       onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                 </div>
@@ -464,8 +667,12 @@ export function StudentsProfilePage() {
                       name="emergencyContactName"
                       value={form.emergencyContactName}
                       onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -475,8 +682,109 @@ export function StudentsProfilePage() {
                       name="emergencyContactNumber"
                       value={form.emergencyContactNumber}
                       onChange={handleChange}
-                      disabled={true}
-                      className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default"
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Parent / Guardian Details */}
+            <Card className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100">
+                <h2 className="text-base font-bold text-neutral-800">Parent / Guardian Details</h2>
+              </div>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Parent/Guardian Name</label>
+                    <input
+                      type="text"
+                      name="parentGuardianName"
+                      value={form.parentGuardianName}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-550 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Relationship</label>
+                    {!editing ? (
+                      <input
+                        type="text"
+                        value={form.relationship || ''}
+                        disabled={true}
+                        className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
+                      />
+                    ) : (
+                      <select
+                        name="relationship"
+                        value={form.relationship}
+                        onChange={handleChange}
+                        className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 appearance-none w-full cursor-pointer"
+                      >
+                        <option value="">Select Relationship</option>
+                        <option value="FATHER">Father</option>
+                        <option value="MOTHER">Mother</option>
+                        <option value="GUARDIAN">Guardian</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Specify Relationship (if Other)</label>
+                    <input
+                      type="text"
+                      name="specifyRelationship"
+                      value={form.specifyRelationship}
+                      onChange={handleChange}
+                      disabled={!editing || form.relationship !== 'OTHER'}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing || form.relationship !== 'OTHER'
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-550 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Parent/Guardian Phone Number</label>
+                    <input
+                      type="tel"
+                      name="parentGuardianPhoneNumber"
+                      value={form.parentGuardianPhoneNumber}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Parent/Guardian Email ID</label>
+                    <input
+                      type="email"
+                      name="parentGuardianEmailId"
+                      value={form.parentGuardianEmailId}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
                     />
                   </div>
                 </div>
@@ -489,28 +797,414 @@ export function StudentsProfilePage() {
                 <h2 className="text-base font-bold text-neutral-800">Address Details</h2>
               </div>
               <CardContent className="p-6 space-y-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Current Address</label>
-                  <textarea
-                    rows={2}
-                    name="currentAddress"
-                    value={form.currentAddress}
-                    onChange={handleChange}
-                    disabled={true}
-                    className="px-3 py-2.5 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none resize-none cursor-default"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">City</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={form.city}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">State</label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={form.state}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Pin Code</label>
+                    <input
+                      type="text"
+                      name="pinCode"
+                      value={form.pinCode}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Permanent Address</label>
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Complete Address</label>
                   <textarea
                     rows={2}
-                    name="permanentAddress"
-                    value={form.permanentAddress}
+                    name="completeAddress"
+                    value={form.completeAddress}
                     onChange={handleChange}
-                    disabled={true}
-                    className="px-3 py-2.5 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none resize-none cursor-default"
+                    disabled={!editing}
+                    className={`h-10 px-3 pt-2 rounded-lg border text-sm font-medium transition-all outline-none ${
+                      !editing
+                        ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                        : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                    }`}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-neutral-100 pt-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Current Address</label>
+                    <textarea
+                      rows={2}
+                      name="currentAddress"
+                      value={form.currentAddress}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 pt-2 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Permanent Address</label>
+                    <textarea
+                      rows={2}
+                      name="permanentAddress"
+                      value={form.permanentAddress}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      className={`h-10 px-3 pt-2 rounded-lg border text-sm font-medium transition-all outline-none ${
+                        !editing
+                          ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                          : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Academic History / Education Details */}
+            <Card className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100">
+                <h2 className="text-base font-bold text-neutral-800">Academic History</h2>
+                <p className="text-xs text-neutral-450 mt-0.5">Your past academic qualifications and scores.</p>
+              </div>
+              <CardContent className="p-6 space-y-6">
+                {/* Class 10 Details */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider border-b border-neutral-100 pb-1">Class 10th / Secondary</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Year of Passing</label>
+                      <input
+                        type="text"
+                        name="class10YearOfPassing"
+                        value={form.class10YearOfPassing}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. 2018"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Grade Type</label>
+                      {!editing ? (
+                        <input
+                          type="text"
+                          value={form.class10GradeType || ''}
+                          disabled={true}
+                          className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
+                        />
+                      ) : (
+                        <select
+                          name="class10GradeType"
+                          value={form.class10GradeType}
+                          onChange={handleChange}
+                          className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 appearance-none w-full cursor-pointer"
+                        >
+                          <option value="">Select Grade Type</option>
+                          <option value="PERCENTAGE">Percentage</option>
+                          <option value="CGPA">CGPA</option>
+                          <option value="GPA">GPA</option>
+                        </select>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Score</label>
+                      <input
+                        type="text"
+                        name="class10Score"
+                        value={form.class10Score}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. 92.5 or 9.5"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Medium of Instruction</label>
+                      <input
+                        type="text"
+                        name="class10MediumOfInstruction"
+                        value={form.class10MediumOfInstruction}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. English, Hindi"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Class 12 Details */}
+                <div className="space-y-3 pt-4 border-t border-neutral-100">
+                  <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider border-b border-neutral-100 pb-1">Class 12th / Senior Secondary</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Year of Passing</label>
+                      <input
+                        type="text"
+                        name="class12YearOfPassing"
+                        value={form.class12YearOfPassing}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. 2020"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Grade Type</label>
+                      {!editing ? (
+                        <input
+                          type="text"
+                          value={form.class12GradeType || ''}
+                          disabled={true}
+                          className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-555 text-sm font-medium outline-none cursor-default appearance-none"
+                        />
+                      ) : (
+                        <select
+                          name="class12GradeType"
+                          value={form.class12GradeType}
+                          onChange={handleChange}
+                          className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 appearance-none w-full cursor-pointer"
+                        >
+                          <option value="">Select Grade Type</option>
+                          <option value="PERCENTAGE">Percentage</option>
+                          <option value="CGPA">CGPA</option>
+                          <option value="GPA">GPA</option>
+                        </select>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Score</label>
+                      <input
+                        type="text"
+                        name="class12Score"
+                        value={form.class12Score}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. 94.0 or 9.6"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Medium of Instruction</label>
+                      <input
+                        type="text"
+                        name="class12MediumOfInstruction"
+                        value={form.class12MediumOfInstruction}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. English, Hindi"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* UG Details */}
+                <div className="space-y-3 pt-4 border-t border-neutral-100">
+                  <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider border-b border-neutral-100 pb-1">Undergraduate (UG) Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Institution Name</label>
+                      <input
+                        type="text"
+                        name="ugInstitutionName"
+                        value={form.ugInstitutionName}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. ABC College of Engineering"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">UG Status</label>
+                      {!editing ? (
+                        <input
+                          type="text"
+                          value={form.ugStatus || ''}
+                          disabled={true}
+                          className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
+                        />
+                      ) : (
+                        <select
+                          name="ugStatus"
+                          value={form.ugStatus}
+                          onChange={handleChange}
+                          className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 appearance-none w-full cursor-pointer"
+                        >
+                          <option value="">Select Status</option>
+                          <option value="PURSUING">Pursuing</option>
+                          <option value="COMPLETED">Completed</option>
+                          <option value="DISCONTINUED">Discontinued</option>
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Grade Type</label>
+                      {!editing ? (
+                        <input
+                          type="text"
+                          value={form.ugGradeType || ''}
+                          disabled={true}
+                          className="h-10 px-3 rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-550 text-sm font-medium outline-none cursor-default appearance-none"
+                        />
+                      ) : (
+                        <select
+                          name="ugGradeType"
+                          value={form.ugGradeType}
+                          onChange={handleChange}
+                          className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 appearance-none w-full cursor-pointer"
+                        >
+                          <option value="">Select Grade Type</option>
+                          <option value="PERCENTAGE">Percentage</option>
+                          <option value="CGPA">CGPA</option>
+                          <option value="GPA">GPA</option>
+                        </select>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Score</label>
+                      <input
+                        type="text"
+                        name="ugScore"
+                        value={form.ugScore}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. 8.5"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Medium of Instruction</label>
+                      <input
+                        type="text"
+                        name="ugMediumOfInstruction"
+                        value={form.ugMediumOfInstruction}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. English"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Higher Qualification */}
+                <div className="space-y-3 pt-4 border-t border-neutral-100">
+                  <div className="flex items-center gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="hasHigherQualification"
+                        checked={form.hasHigherQualification}
+                        onChange={(e) => {
+                          if (editing) {
+                            setForm((prev) => ({
+                              ...prev,
+                              hasHigherQualification: e.target.checked,
+                            }));
+                          }
+                        }}
+                        disabled={!editing}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-800" style={{ backgroundColor: form.hasHigherQualification ? 'rgb(88, 5, 85)' : '#e5e5e5' }} />
+                    </label>
+                    <span className="text-sm font-semibold text-neutral-800">Has Higher Qualification</span>
+                  </div>
+
+                  {form.hasHigherQualification && (
+                    <div className="flex flex-col gap-1.5 mt-2 animate-fade-in">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Higher Qualification Description</label>
+                      <input
+                        type="text"
+                        name="higherQualification"
+                        value={form.higherQualification}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. Master of Business Administration (MBA)"
+                        className={`h-10 px-3 rounded-lg border text-sm font-medium transition-all outline-none ${
+                          !editing
+                            ? 'bg-neutral-50 border-neutral-100 text-neutral-555 cursor-default'
+                            : 'bg-white border-neutral-200 text-neutral-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100'
+                        }`}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
