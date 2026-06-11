@@ -74,6 +74,9 @@ export function StudentsPage() {
     },
   });
 
+  // console.log('scheduleData', scheduleData);
+  // console.log('classes', scheduleData?.classes);
+
   const classesOnDate = useMemo(() => {
     if (!scheduleData?.classes) return [];
     return scheduleData.classes.filter((c: any) => {
