@@ -50,8 +50,8 @@ export function StudentProfilePage() {
     const [draft, setDraft] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
-    const [bannerImage, setBannerImage] = useState('');
-    const bannerInputRef = useRef<HTMLInputElement>(null);
+    // const [bannerImage, setBannerImage] = useState('');
+    // const bannerInputRef = useRef<HTMLInputElement>(null);
 
     const [form, setForm] = useState({
         firstName: '',
@@ -473,19 +473,18 @@ export function StudentProfilePage() {
         }));
     };
 
-    const handleBannerChange = (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        const file = e.target.files?.[0];
+    // const handleBannerChange = (
+    //     e: React.ChangeEvent<HTMLInputElement>
+    // ) => {
+    //     const file = e.target.files?.[0];
 
-        if (!file) return;
+    //     if (!file) return;
 
-        const previewUrl = URL.createObjectURL(file);
+    //     const previewUrl = URL.createObjectURL(file);
 
-        setBannerImage(previewUrl);
+    //     setBannerImage(previewUrl);
 
-        // upload API call here
-    };
+    // };
 
     return (
         <div className="max-w-6xl mx-auto px-4 font-sans">
