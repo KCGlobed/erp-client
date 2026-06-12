@@ -235,7 +235,8 @@ export function DashboardLayout() {
 
             {/* User profile */}
             <div
-              className="hidden md:flex items-center gap-2 pl-3"
+            onClick={() => navigate('/profile')}
+              className="hidden md:flex items-center gap-2 pl-3 cursor-pointer"
               style={{ borderLeft: '1px solid var(--border)' }}
             >
               <div
@@ -244,7 +245,9 @@ export function DashboardLayout() {
               >
                 {initials}
               </div>
-              <div className="leading-tight">
+              <div
+              
+              className="leading-tight">
                 <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
                   {user?.firstName} {user?.lastName}
                 </div>
