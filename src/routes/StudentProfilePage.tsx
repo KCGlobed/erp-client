@@ -13,7 +13,7 @@ import {
     Check,
     Edit2,
     X,
-    CircleCheck 
+    CircleCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiFetch } from '../lib/api';
@@ -24,6 +24,7 @@ import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import Skeleton from '../components/ui/skeleton';
 import { useRef } from 'react';
+// import { ImagePlus } from 'lucide-react';
 
 // Helper to format ISO date string to YYYY-MM-DD
 const formatDateForInput = (dateStr: string | null | undefined) => {
@@ -49,6 +50,8 @@ export function StudentProfilePage() {
     const [draft, setDraft] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
+    // const [bannerImage, setBannerImage] = useState('');
+    // const bannerInputRef = useRef<HTMLInputElement>(null);
 
     const [form, setForm] = useState({
         firstName: '',
@@ -470,6 +473,19 @@ export function StudentProfilePage() {
         }));
     };
 
+    // const handleBannerChange = (
+    //     e: React.ChangeEvent<HTMLInputElement>
+    // ) => {
+    //     const file = e.target.files?.[0];
+
+    //     if (!file) return;
+
+    //     const previewUrl = URL.createObjectURL(file);
+
+    //     setBannerImage(previewUrl);
+
+    // };
+
     return (
         <div className="max-w-6xl mx-auto px-4 font-sans">
             {/* ── Top Nav / Header ── */}
@@ -624,7 +640,7 @@ export function StudentProfilePage() {
             ) : (
                 <>
                     <Card className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden mb-6">
-                        <CardContent className="p-6">
+                        <CardContent className="px-6 py-6">
                             <div className="flex flex-col md:flex-row overflow-hidden items-center md:items-start gap-6">
                                 {/* Avatar section */}
                                 <div className="relative w-24 h-24 shrink-0 rounded-full overflow-hidden group border-2 border-white shadow-md">
