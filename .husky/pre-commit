@@ -1,0 +1,12 @@
+#!/bin/sh
+
+LINES=$(git diff --cached --numstat | awk '{sum += $1} END {print sum}')
+
+echo "Changed lines: $LINES"
+
+if [ "$LINES" -gt 1000 ]; then
+  echo "❌ Commit blocked. More than 1000 lines changed."
+  exit 1
+fi
+
+echo "✅ Line limit check passed."
