@@ -354,10 +354,10 @@ export function FacultyProfilePage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
 
-      formData.append('profilePhoto', file);
+      formData.append('file', file);
 
-      return apiFetch('/faculty-profile/me', {
-        method: 'PATCH',
+      return apiFetch('/faculty-profile/me/photo', {
+        method: 'POST',
         body: formData,
       });
     },
