@@ -354,11 +354,14 @@ export function FacultyProfilePage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
 
-      formData.append('file', file);
+      formData.append('photo', file);
 
-      return apiFetch('/faculty-profile/me/photo', {
+      return apiFetch('/faculty-profile/me/images', {
         method: 'POST',
         body: formData,
+        // headers: {
+        //   'content-type': 'multipart/form-data',
+        // }
       });
     },
     onSuccess: () => {
