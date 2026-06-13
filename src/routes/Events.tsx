@@ -16,7 +16,7 @@ export function Events() {
     const [search, setSearch] = useState('');
 
     // const [selectedEvent, setSelectedEvent] = useState<any>(null);
-    const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+    // const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
     const [isEventsDrawerOpen, setIsEventsDrawerOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<any>(null);
 
@@ -61,7 +61,7 @@ export function Events() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['events'] });
             setConfirmDelete(null);
-            setIsDetailDrawerOpen(false);
+            // setIsDetailDrawerOpen(false);
         },
     });
 
