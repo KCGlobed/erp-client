@@ -24,7 +24,7 @@ import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import Skeleton from '../components/ui/skeleton';
 import { useRef } from 'react';
-// import { ImagePlus } from 'lucide-react';
+
 
 // Helper to format ISO date string to YYYY-MM-DD
 const formatDateForInput = (dateStr: string | null | undefined) => {
@@ -50,8 +50,7 @@ export function StudentProfilePage() {
     const [draft, setDraft] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
-    // const [bannerImage, setBannerImage] = useState('');
-    // const bannerInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
 
     const [form, setForm] = useState({
         firstName: '',
@@ -103,6 +102,7 @@ export function StudentProfilePage() {
         queryKey: ['student-profile'],
         queryFn: () => apiFetch('/student-profile/me'),
     });
+    const [bannerUrl, setBannerUrl] = useState(data?.profile?.bannerUrl || '');
 
     useEffect(() => {
         if (!data) return;
@@ -435,6 +435,38 @@ export function StudentProfilePage() {
 
         uploadPhotoMutation.mutate(file);
     };
+    const uploadBannerMutation = useMutation({
+        mutationFn: async (file: File) => {
+            const formData = new FormData();
+
+            formData.append('bannerImage', file);
+
+            return apiFetch('/student-profile/me', {
+                method: 'PATCH',
+                body: formData,
+            });
+        },
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ['student-profile'],
+            });
+        },
+    });
+
+    const handleBannerChange = (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        const previewUrl = URL.createObjectURL(file);
+
+        setBannerUrl(previewUrl);
+
+        uploadBannerMutation.mutate(file);
+    };
 
     const addExperience = () => {
         setForm((prev) => ({
@@ -473,18 +505,6 @@ export function StudentProfilePage() {
         }));
     };
 
-    // const handleBannerChange = (
-    //     e: React.ChangeEvent<HTMLInputElement>
-    // ) => {
-    //     const file = e.target.files?.[0];
-
-    //     if (!file) return;
-
-    //     const previewUrl = URL.createObjectURL(file);
-
-    //     setBannerImage(previewUrl);
-
-    // };
 
     return (
         <div className="max-w-6xl mx-auto px-4 font-sans">
@@ -639,9 +659,34 @@ export function StudentProfilePage() {
                 </div>
             ) : (
                 <>
-                    <Card className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden mb-6">
-                        <CardContent className="px-6 py-6">
-                            <div className="flex flex-col md:flex-row overflow-hidden items-center md:items-start gap-6">
+                    <Card
+                        className="relative min-h-[100px] rounded-2xl overflow-hidden shadow-sm border border-neutral-100 mb-6 flex flex-col justify-end"
+                        style={{
+                            backgroundImage: bannerUrl
+                                ? `url(${bannerUrl})`
+                                : 'bg-white',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => bannerInputRef.current?.click()}
+                            className="absolute flex gap-2 justify-center items-center top-6 right-6 bg-transparent hover:bg-white text-neutral-800 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-semibold shadow border border-white/20 transition-all cursor-pointer z-20"
+                        >
+                            <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+
+                        <input
+                            ref={bannerInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleBannerChange}
+                        />
+
+                        <CardContent className="relative px-6 py-6 z-10 w-full mt-auto">
+                            <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
                                 {/* Avatar section */}
                                 <div className="relative w-24 h-24 shrink-0 rounded-full overflow-hidden group border-2 border-white shadow-md">
                                     <img
@@ -668,14 +713,14 @@ export function StudentProfilePage() {
                                 </div>
 
                                 {/* Title / Role details */}
-                                <div className="flex-1 text-center md:text-left min-w-0">
-                                    <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1 justify-center md:justify-start">
+                                <div className="flex-1 md:text-left min-w-0">
+                                    <div className="flex flex-col md:flex-row gap-2 mb-1 justify-center md:justify-start">
                                         <h1 className="text-xl font-bold text-neutral-900 truncate">{fullName || 'Student Profile'}</h1>
-                                        <div className="flex gap-2 justify-center md:justify-start shrink-0">
-                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-purple-100 text-purple-700 bg-purple-50">
+                                        <div className="flex gap-2 justify-center items-center md:justify-start shrink-0">
+                                            <span className="text-[10px] font-bold px-2.5  rounded-full border border-purple-100 py-0.5 text-purple-700 bg-purple-50">
                                                 Verified
                                             </span>
-                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 py-0.5 text-neutral-600">
                                                 Student
                                             </span>
                                         </div>

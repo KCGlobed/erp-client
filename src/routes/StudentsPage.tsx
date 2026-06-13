@@ -291,7 +291,7 @@ export function StudentsPage() {
             <Download className="h-4 w-4" /> Export
           </button>
           {isAdmin && (
-            <button className="inline-flex items-center gap-2 px-3 h-9 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer">
+            <button className="inline-flex w-46 items-center gap-2 px-3 h-9 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer">
               <Plus className="h-4 w-4" /> Add Student
             </button>
           )}
