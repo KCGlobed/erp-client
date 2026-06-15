@@ -123,7 +123,6 @@ export function Events() {
         }
     };
 
-
     const filteredEvents = events.filter(
         (event) =>
             event.title?.toLowerCase().includes(search.toLowerCase())
