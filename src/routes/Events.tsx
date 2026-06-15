@@ -24,23 +24,24 @@ export function Events() {
 
     // Form states for Event
     const [eventForm, setEventForm] = useState({
-        name: '',
+        title: '',
         description: '',
         startDate: '',
         endDate: '',
+        type: 'ORIENTATION',
     });
 
     const isAdmin = user?.roles.includes('SUPER_ADMIN') || user?.roles.includes('ADMIN');
 
-    // Queries
+    // Get tasks
     const { data: events = [], isLoading } = useQuery<any[]>({
         queryKey: ['events'],
-        queryFn: () => apiFetch('/events'),
+        queryFn: () => apiFetch('/calendar/events'),
     });
 
     // Mutations
     const createEvents = useMutation({
-        mutationFn: (data: any) => apiFetch('/events', { method: 'POST', body: JSON.stringify(data) }),
+        mutationFn: (data: any) => apiFetch('/calendar/events', { method: 'POST', body: JSON.stringify(data) }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['events'] });
             closeEventDrawer();
@@ -49,7 +50,7 @@ export function Events() {
 
     const updateEvents = useMutation({
         mutationFn: (data: any) =>
-            apiFetch(`/events/${editingEvent.id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+            apiFetch(`/calendar/events/${editingEvent.id}`, { method: 'PATCH', body: JSON.stringify(data) }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['events'] });
             closeEventDrawer();
@@ -57,7 +58,7 @@ export function Events() {
     });
 
     const deleteEvents = useMutation({
-        mutationFn: (id: string) => apiFetch(`/events/${id}`, { method: 'DELETE' }),
+        mutationFn: (id: string) => apiFetch(`/calendar/events/${id}`, { method: 'DELETE' }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['events'] });
             setConfirmDelete(null);
@@ -87,10 +88,11 @@ export function Events() {
     const openCreateEvent = () => {
         setEditingEvent(null);
         setEventForm({
-            name: '',
+            title: '',
             description: '',
             startDate: '',
             endDate: '',
+            type: '',
         });
         setIsEventsDrawerOpen(true);
     };
@@ -99,10 +101,11 @@ export function Events() {
         e.stopPropagation();
         setEditingEvent(event);
         setEventForm({
-            name: event.name,
+            title: event.title,
             description: event.description || '',
             startDate: event.startDate,
             endDate: event.endDate,
+            type: event.type || '',
         });
         setIsEventsDrawerOpen(true);
     };
@@ -120,24 +123,10 @@ export function Events() {
         }
     };
 
-    // const openDetailDrawer = (event: any) => {
-    //     setSelectedEvent(event);
-    //     setSelectedCurriculumIndex(0);
-    //     setIsDetailDrawerOpen(true);
-    // };
-
-    // const handleAddCurriculum = () => {
-    //     if (!newCurriculumVersion.trim()) return;
-    //     createCurriculum.mutate({
-    //         eventId: selectedEvent.id,
-    //         version: newCurriculumVersion.trim(),
-    //     });
-    // };
 
     const filteredEvents = events.filter(
-        (c) =>
-            c.name.toLowerCase().includes(search.toLowerCase()) ||
-            c.code.toLowerCase().includes(search.toLowerCase())
+        (event) =>
+            event.title?.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
@@ -153,8 +142,8 @@ export function Events() {
                         Academic Events
                     </h1>
                     {/* <p className="text-sm text-gray-500">
-            Manage events profiles, curriculum versions, trimesters, and subject outlines.
-          </p> */}
+                        Manage events profiles, curriculum versions, trimesters, and subject outlines.
+                    </p> */}
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
@@ -216,24 +205,21 @@ export function Events() {
                             <Card
                                 key={event.id}
                                 className="cursor-pointer hover:shadow-md transition-all duration-200 group relative border border-gray-100 flex flex-col justify-between"
-                                // onClick={() => openDetailDrawer(event)}
+                            // onClick={() => openDetailDrawer(event)}
                             >
                                 <CardHeader>
-                                    {/* <div className="flex items-center justify-between">
-                                        <span className="text-xs font-mono uppercase bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-semibold">
-                                            {event.code}
-                                        </span>
+                                    <div className="flex items-center justify-end">
                                         <span
-                                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${event.status === 'ACTIVE'
+                                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${event.isActive === true
                                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                 : 'bg-red-50 text-red-700 border border-red-200'
                                                 }`}
                                         >
-                                            {event.status}
+                                            {event.isActive ? 'Active' : 'Inactive'}
                                         </span>
-                                    </div> */}
+                                    </div>
                                     <CardTitle className="mt-2 text-lg text-gray-900 group-hover:text-[var(--primary)] transition-colors">
-                                        {event.name}
+                                        {event.title}
                                     </CardTitle>
                                     <CardDescription className="line-clamp-2 mt-1">
                                         {event.description || 'No description provided.'}
@@ -242,18 +228,14 @@ export function Events() {
                                 <CardContent className="space-y-3">
                                     <div className="flex items-center gap-4 text-xs text-gray-500">
                                         <span className="flex items-center gap-1">
-                                            <Clock className="w-3.5 h-3.5" />
-                                            {event.startDate}
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            {new Date(event.startDate).toLocaleDateString()}
                                         </span>
                                         <span className="flex items-center gap-1">
                                             <Calendar className="w-3.5 h-3.5" />
-                                            {event.endDate}
+                                            {new Date(event.endDate).toLocaleDateString()}
                                         </span>
                                     </div>
-                                    {/* <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-50">
-                    <span className="text-gray-400">Latest Curriculum:</span>
-                    <span className="font-medium text-gray-700">{latestVersion}</span>
-                  </div> */}
                                 </CardContent>
                                 <CardFooter className="flex justify-end items-center bg-gray-50/50 rounded-b-xl border-t border-gray-100/50 py-3">
                                     {isAdmin && (
@@ -284,126 +266,7 @@ export function Events() {
                 </div>
             )}
 
-            {/* Course Detail / Curriculum Viewer Drawer */}
-            {/* <Drawer
-        isOpen={isDetailDrawerOpen}
-        onClose={() => setIsDetailDrawerOpen(false)}
-        title={selectedEvent ? `${selectedEvent.name} (${selectedEvent.code})` : ''}
-        description="Browse versioned curriculums, trimester schedules, subjects, and session plans."
-      >
-        {selectedEvent && (
-          <div className="space-y-6">
-            <div className="p-4 rounded-lg bg-gray-50 border border-gray-100 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700">Active Curriculum Version</span>
-                {isAdmin && (
-                  <Button variant="outline" size="sm" onClick={() => setIsNewCurriculumModalOpen(true)}>
-                    Add Version
-                  </Button>
-                )}
-              </div>
-              {selectedCourse.curriculums?.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {selectedCourse.curriculums.map((curr: any, idx: number) => (
-                    <button
-                      key={curr.id}
-                      onClick={() => setSelectedCurriculumIndex(idx)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer ${selectedCurriculumIndex === idx
-                          ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]'
-                          : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
-                        }`}
-                    >
-                      {curr.version} {curr.isActive && '●'}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500 py-2">No curriculum versions configured yet.</div>
-              )}
-            </div>
 
-            {activeCurriculum ? (
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Curriculum Trimester Syllabus</h3>
-                <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm space-y-4">
-                  {trimestersArray.map((trimesterNum) => {
-                    const subjects =
-                      activeCurriculum.subjects?.filter((s: any) => s.trimester === trimesterNum) || [];
-                    return (
-                      <div key={trimesterNum} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-semibold text-gray-800">Trimester {trimesterNum}</h4>
-                          {isAdmin && (
-                            <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => openAddSubject(trimesterNum, activeCurriculum.id)}>
-                              <Plus className="w-3.5 h-3.5" /> Add Subject
-                            </Button>
-                          )}
-                        </div>
-                        {subjects.length === 0 ? (
-                          <div className="text-xs text-gray-400 italic py-2 pl-4">No subjects added to Trimester {trimesterNum} yet.</div>
-                        ) : (
-                          <div className="space-y-3 pl-4">
-                            {subjects.map((sub: any) => (
-                              <div key={sub.id} className="p-3 bg-gray-50/50 rounded-lg border border-gray-100 space-y-2">
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <span className="text-[10px] font-mono font-bold text-gray-400">{sub.code}</span>
-                                    <h5 className="text-xs font-semibold text-gray-800">{sub.name}</h5>
-                                  </div>
-                                  <span className="flex items-center gap-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100">
-                                    <Award className="w-3 h-3" /> {sub.credits} Credits
-                                  </span>
-                                </div>
-                                {sub.learningOutcomes && (
-                                  <p className="text-[11px] text-gray-500">
-                                    <strong>Learning Outcomes:</strong> {sub.learningOutcomes}
-                                  </p>
-                                )}
-
-                                {sub.modules?.length > 0 && (
-                                  <div className="pt-1.5 border-t border-gray-100/50">
-                                    <span className="text-[10px] uppercase font-bold text-gray-400">Modules ({sub.modules.length})</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {sub.modules.map((m: any) => (
-                                        <span key={m.id} className="text-[10px] bg-white border border-gray-150 rounded px-2 py-0.5 text-gray-600">
-                                          {m.name}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {sub.sessionPlans?.length > 0 && (
-                                  <div className="pt-1">
-                                    <span className="text-[10px] uppercase font-bold text-gray-400">Session Plans</span>
-                                    <div className="mt-1 space-y-1">
-                                      {sub.sessionPlans.map((sp: any) => (
-                                        <div key={sp.id} className="text-[10px] text-gray-500 flex items-start gap-1">
-                                          <span className="font-bold text-gray-700">W{sp.week}:</span>
-                                          <span>{sp.title}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-10 text-xs text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                Please add or select a curriculum version to view subjects list.
-              </div>
-            )}
-          </div>
-        )}
-      </Drawer> */}
-
-            {/* Course Create/Edit Drawer */}
             <Drawer
                 isOpen={isEventsDrawerOpen}
                 onClose={closeEventDrawer}
@@ -415,8 +278,8 @@ export function Events() {
                         <label className="text-sm font-medium text-gray-700">Event Name</label>
                         <Input
                             placeholder="e.g. Master of Business Administration"
-                            value={eventForm.name}
-                            onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
+                            value={eventForm.title}
+                            onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
@@ -427,17 +290,10 @@ export function Events() {
                             onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
                         />
                     </div>
-                    {/* <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Event Code</label>
-            <Input
-              placeholder="e.g. MBA-100"
-              value={eventForm.code}
-              onChange={(e) => setEventForm({ ...eventForm, code: e.target.value })}
-            />
-          </div> */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Start Date</label>
                         <Input
+                            type='date'
                             placeholder="e.g. 2024-01-01"
                             value={eventForm.startDate}
                             onChange={(e) => setEventForm({ ...eventForm, startDate: e.target.value })}
@@ -446,10 +302,35 @@ export function Events() {
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">End Date</label>
                         <Input
+                            type='date'
                             placeholder='e.g. 2024-01-10'
                             value={eventForm.endDate}
                             onChange={(e) => setEventForm({ ...eventForm, endDate: e.target.value })}
                         />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">
+                            Event Type
+                        </label>
+
+                        <select
+                            value={eventForm.type}
+                            onChange={(e) =>
+                                setEventForm({
+                                    ...eventForm,
+                                    type: e.target.value,
+                                })
+                            }
+                            className="w-full border rounded-md px-3 py-2"
+                        >
+                            <option value="ORIENTATION">Orientation</option>
+                            <option value="WORKSHOP">Workshop</option>
+                            <option value="SEMINAR">Seminar</option>
+                            <option value="GUEST_LECTURE">Guest Lecture</option>
+                            <option value="CONVOCATION">Convocation</option>
+                            <option value="FACULTY_MEETING">Faculty Meeting</option>
+                            <option value="OTHER">Other</option>
+                        </select>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
                         <Button variant="outline" onClick={closeEventDrawer}>Cancel</Button>
@@ -460,102 +341,7 @@ export function Events() {
                 </div>
             </Drawer>
 
-            {/* Add Curriculum Version Modal */}
-            {/* <Modal
-                isOpen={isNewCurriculumModalOpen}
-                onClose={() => setIsNewCurriculumModalOpen(false)}
-                title="Add Curriculum Version"
-            >
-                <div className="space-y-4">
-                    <p className="text-xs text-gray-500">
-                        Define a new curriculum version for {selectedEvent?.name}. Trimester subjects will be version controlled under this label.
-                    </p>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Version Label</label>
-                        <Input
-                            placeholder="e.g. v2026, v1.0"
-                            value={newCurriculumVersion}
-                            onChange={(e) => setNewCurriculumVersion(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsNewCurriculumModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddCurriculum} disabled={createCurriculum.isPending || !newCurriculumVersion.trim()}>
-                            {createCurriculum.isPending ? 'Adding...' : 'Add Version'}
-                        </Button>
-                    </div>
-                </div>
-            </Modal> */}
 
-            {/* Subject Creator Drawer */}
-            {/* <Drawer
-                isOpen={isSubjectDrawerOpen}
-                onClose={() => setIsSubjectDrawerOpen(false)}
-                title={`Add Subject to Trimester ${targetTrimester}`}
-                description="Define subject codes, credit weight, learning outcomes, and structure."
-            >
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Subject Name</label>
-                        <Input
-                            placeholder="e.g. Corporate Finance"
-                            value={subjectForm.name}
-                            onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Subject Code</label>
-                        <Input
-                            placeholder="e.g. FIN201"
-                            value={subjectForm.code}
-                            onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Credits</label>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={subjectForm.credits}
-                            onChange={(e) => setSubjectForm({ ...subjectForm, credits: parseInt(e.target.value) || 4 })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Learning Outcomes</label>
-                        <Input
-                            placeholder="Outcomes statement..."
-                            value={subjectForm.learningOutcomes}
-                            onChange={(e) => setSubjectForm({ ...subjectForm, learningOutcomes: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Modules (One per line)</label>
-                        <textarea
-                            className="w-full min-h-[80px] p-2.5 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                            placeholder="e.g. Module 1: Capital Budgeting&#10;Module 2: Equity & Debt"
-                            value={subjectForm.modulesText}
-                            onChange={(e) => setSubjectForm({ ...subjectForm, modulesText: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Weekly Session Plans (One per line)</label>
-                        <textarea
-                            className="w-full min-h-[80px] p-2.5 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                            placeholder="e.g. Introduction to Financing&#10;Analyzing Cash Flows"
-                            value={subjectForm.sessionsText}
-                            onChange={(e) => setSubjectForm({ ...subjectForm, sessionsText: e.target.value })}
-                        />
-                    </div>
-                    <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => setIsSubjectDrawerOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSubjectSubmit} disabled={createSubject.isPending || !subjectForm.name || !subjectForm.code}>
-                            {createSubject.isPending ? 'Saving...' : 'Add Subject'}
-                        </Button>
-                    </div>
-                </div>
-            </Drawer> */}
-
-            {/* Delete Confirmation Modal */}
             <Modal
                 isOpen={!!confirmDelete}
                 onClose={() => setConfirmDelete(null)}
