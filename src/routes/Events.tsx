@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Clock, Calendar, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Calendar, Edit2, Trash2 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { Button } from '../components/ui/Button';
