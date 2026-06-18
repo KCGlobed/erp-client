@@ -79,6 +79,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { title: "Attendance", url: "/attendance", icon: ClipboardList, reqRoles: ['FACULTY'] },
         { title: "Exams", url: "/exams", icon: FileText },
         { title: "Timetable", url: "/timetable", icon: CalendarDays },
+        { title: "Events", url: "/events", icon: CalendarDays, reqRoles: ['SUPER_ADMIN']}
       ],
     },
     {

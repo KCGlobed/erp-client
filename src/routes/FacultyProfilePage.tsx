@@ -47,6 +47,8 @@ export function FacultyProfilePage() {
   const [saved, setSaved] = useState(false);
   const [draft, setDraft] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [bannerUrl, setBannerUrl] = useState('');
   const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
 
   const [form, setForm] = useState({
@@ -55,6 +57,7 @@ export function FacultyProfilePage() {
     lastName: '',
     gender: '',
     profilePhotoUrl: '',
+    profileBannerUrl: '',
     personalEmail: '',
     mobileNumber: '',
     alternateMobileNumber: '',
@@ -161,6 +164,7 @@ export function FacultyProfilePage() {
         ];
       }
     }
+    console.log("API photo URL:", data.profile?.profilePhotoUrl);
 
     setForm({
       firstName: data.firstName ?? '',
@@ -168,6 +172,7 @@ export function FacultyProfilePage() {
       middleName: data.profile?.middleName ?? '',
       gender: data.profile?.gender ?? '',
       profilePhotoUrl: data.profile?.profilePhotoUrl ?? '',
+      profileBannerUrl: data.profile?.profileBannerUrl ?? '',
       personalEmail: data.profile?.personalEmail ?? '',
       mobileNumber: data.profile?.mobileNumber ?? '',
       alternateMobileNumber: data.profile?.alternateMobileNumber ?? '',
@@ -180,12 +185,15 @@ export function FacultyProfilePage() {
       experience: parsedExperience,
     });
 
+    setBannerUrl(data.profile?.profileBannerUrl ?? '');
+
     const hasRealExperiences = parsedExperience.length > 0;
     if (hasRealExperiences) {
       setEmploymentStatus('EXPERIENCED');
     } else {
       setEmploymentStatus('FRESHER');
     }
+
   }, [data]);
 
   // ── Mutations ────────────────────────────────────────────────────────────
@@ -371,6 +379,26 @@ export function FacultyProfilePage() {
     },
   });
 
+  const uploadBannerMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+
+      // VERIFY THIS KEY WITH BACKEND
+      formData.append('banner', file);
+
+      return apiFetch('/faculty-profile/me/images', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['faculty-profile'],
+      });
+    },
+  });
+
   const handleProfilePhotoChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -387,6 +415,20 @@ export function FacultyProfilePage() {
     }));
 
     uploadPhotoMutation.mutate(file);
+  };
+
+  const handleBannerChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setBannerUrl(previewUrl);
+
+    uploadBannerMutation.mutate(file);
   };
 
   return (
@@ -545,78 +587,102 @@ export function FacultyProfilePage() {
           </div>
         ) : (
           <>
-            <Card className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden mb-6">
+            <Card
+              className="relative min-h-[100px] rounded-2xl overflow-hidden shadow-sm border border-neutral-100 mb-6 flex flex-col justify-end"
+              style={{
+                 backgroundImage: bannerUrl ? `url(${bannerUrl})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
+              {/* <div className="absolute inset-0 bg-black/30 z-0" /> */}
+
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                className="absolute flex gap-2 justify-center items-center top-4 right-4 bg-transparent hover:bg-white text-neutral-800 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-semibold shadow border border-white/20 transition-all cursor-pointer z-20"
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+              </button>
+
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleBannerChange}
+              />
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                   {/* Avatar section */}
-                    <div className="relative w-24 h-24 shrink-0 rounded-full overflow-hidden group border-2 border-white shadow-md">
-                      <img
-                        src={avatar}
-                        alt={fullName}
-                        className="w-full h-full object-cover"
-                      />
+                  <div className="relative w-24 h-24 shrink-0 rounded-full bg-white/70 overflow-hidden group border-2 border-white shadow-md">
+                    <img
+                      src={avatar}
+                      alt={fullName}
+                      className="w-full h-full object-cover"
+                    />
 
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-0 left-0 w-full h-6 bg-primary/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      >
-                        <Edit2 className="h-4 w-4 text-white" />
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-0 left-0 w-full h-6 bg-primary/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <Edit2 className="h-4 w-4 text-white" />
+                    </button>
 
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleProfilePhotoChange}
-                      />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleProfilePhotoChange}
+                    />
+                  </div>
+
+                  {/* Title / Role details */}
+                  <div className="flex-1 text-center md:text-left min-w-0">
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1 justify-center md:justify-start">
+                      <h1 className="text-xl font-bold text-neutral-900 truncate">{fullName || 'Faculty Profile'}</h1>
+                      <div className="flex gap-2 justify-center md:justify-start shrink-0">
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-purple-100 text-purple-700 bg-purple-50">
+                          Verified
+                        </span>
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                          Faculty
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Title / Role details */}
-                    <div className="flex-1 text-center md:text-left min-w-0">
-                      <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1 justify-center md:justify-start">
-                        <h1 className="text-xl font-bold text-neutral-900 truncate">{fullName || 'Faculty Profile'}</h1>
-                        <div className="flex gap-2 justify-center md:justify-start shrink-0">
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-purple-100 text-purple-700 bg-purple-50">
-                            Verified
-                          </span>
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
-                            Faculty
-                          </span>
-                        </div>
-                      </div>
+                    <p className="text-sm text-neutral-500 mb-3">
+                      {form.experience[0]?.designation || 'Faculty'} · {form.experience[0]?.functionalArea || 'Department'}
+                    </p>
 
-                      <p className="text-sm text-neutral-500 mb-3">
-                        {form.experience[0]?.designation || 'Faculty'} · {form.experience[0]?.functionalArea || 'Department'}
-                      </p>
-
-                      <div className="flex flex-wrap justify-center md:justify-start gap-x-5 gap-y-2 text-xs text-neutral-500">
+                    <div className="flex flex-wrap justify-center md:justify-start gap-x-5 gap-y-2 text-xs text-neutral-500">
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> {data?.email}
+                      </span>
+                      {form.mobileNumber && (
                         <span className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> {data?.email}
+                          <Phone className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> {form.mobileNumber}
                         </span>
-                        {form.mobileNumber && (
-                          <span className="flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> {form.mobileNumber}
-                          </span>
-                        )}
-                        {form.currentAddress && (
-                          <span className="flex items-center gap-1.5 max-w-xs truncate">
-                            <MapPin className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> {form.currentAddress}
-                          </span>
-                        )}
-                        {form.dateOfJoining && (
-                          <span className="flex items-center gap-1.5">
-                            <CalendarIcon className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> Joined {form.dateOfJoining}
-                          </span>
-                        )}
-                      </div>
+                      )}
+                      {form.currentAddress && (
+                        <span className="flex items-center gap-1.5 max-w-xs truncate">
+                          <MapPin className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> {form.currentAddress}
+                        </span>
+                      )}
+                      {form.dateOfJoining && (
+                        <span className="flex items-center gap-1.5">
+                          <CalendarIcon className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> Joined {form.dateOfJoining}
+                        </span>
+                      )}
                     </div>
                   </div>
+                </div>
               </CardContent>
             </Card>
 
-            <div className="mb-4">
+            <div className="relative z-10  mb-4">
               <Tabs
                 activeTab={activeTab}
                 onChange={(id: any) => setActiveTab(id)}
