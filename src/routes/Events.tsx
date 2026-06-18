@@ -28,6 +28,7 @@ export function Events() {
         description: '',
         startDate: '',
         endDate: '',
+        isActive: true,
         type: 'WORKSHOP',
         visibleToRoles: [] as string[],
         cohortIds: [] as string[],
@@ -40,6 +41,7 @@ export function Events() {
             description: '',
             startDate: '',
             endDate: '',
+            isActive: true,
             type: 'WORKSHOP',
             visibleToRoles: [],
             cohortIds: [],
@@ -114,6 +116,7 @@ export function Events() {
             description: '',
             startDate: '',
             endDate: '',
+            isActive: true,
             type: 'WORKSHOP',
             visibleToRoles: [],
             cohortIds: [],
@@ -126,15 +129,17 @@ export function Events() {
         e.stopPropagation();
         setEditingEvent(event);
         setEventForm({
-            title: event.title,
+            title: event.title || '',
             description: event.description || '',
-            startDate: event.startDate,
-            endDate: event.endDate,
+            startDate: event.startDate ? new Date(event.startDate).toISOString().split('T')[0] : '',
+            endDate: event.endDate ? new Date(event.endDate).toISOString().split('T')[0] : '',
+            isActive: event.isActive ?? true,
             type: event.type || '',
             visibleToRoles: event.visibleToRoles || [],
             cohortIds: event.cohortIds || [],
             courseIds: event.courseIds || [],
         });
+        console.log(event)
         setIsEventsDrawerOpen(true);
     };
 
@@ -299,8 +304,33 @@ export function Events() {
                 isOpen={isEventsDrawerOpen}
                 onClose={closeEventDrawer}
                 title={editingEvent ? 'Update Event Profile' : 'Create Event Profile'}
-                description="Set event details, start date and end date."
-            >
+                description="Set event details, start date and end date.">
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-150 mb-4">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-semibold text-gray-700">Event Status</span>
+                            <span className="text-[10px] text-gray-500">
+                                Set whether this event is active and visible
+                            </span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={eventForm.isActive}
+                                onChange={(e) => setEventForm({ ...eventForm, isActive: e.target.checked })}
+                            />
+                            <div 
+                                className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"
+                                style={{ backgroundColor: eventForm.isActive ? 'var(--primary)' : '#e5e5e5' }}
+                            />
+                            <span className="ml-2.5 text-xs font-medium text-gray-700 min-w-[50px]">
+                                {eventForm.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </label>
+                    </div>
+                </div>
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-gray-700">Event Title</label>
