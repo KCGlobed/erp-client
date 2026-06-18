@@ -28,8 +28,26 @@ export function Events() {
         description: '',
         startDate: '',
         endDate: '',
-        type: 'ORIENTATION',
+        isActive: true,
+        type: 'WORKSHOP',
+        visibleToRoles: [] as string[],
+        cohortIds: [] as string[],
+        courseIds: [] as string[],
     });
+
+    const resetEventForm = () => {
+        setEventForm({
+            title: '',
+            description: '',
+            startDate: '',
+            endDate: '',
+            isActive: true,
+            type: 'WORKSHOP',
+            visibleToRoles: [],
+            cohortIds: [],
+            courseIds: [],
+        });
+    };
 
     const isAdmin = user?.roles.includes('SUPER_ADMIN') || user?.roles.includes('ADMIN');
 
@@ -39,12 +57,18 @@ export function Events() {
         queryFn: () => apiFetch('/calendar/events'),
     });
 
+    const { data: cohorts = [] } = useQuery<any[]>({
+        queryKey: ['cohorts'],
+        queryFn: () => apiFetch('/cohorts'),
+    });
+
     // Mutations
     const createEvents = useMutation({
         mutationFn: (data: any) => apiFetch('/calendar/events', { method: 'POST', body: JSON.stringify(data) }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['events'] });
             closeEventDrawer();
+            resetEventForm();
         },
     });
 
@@ -92,7 +116,11 @@ export function Events() {
             description: '',
             startDate: '',
             endDate: '',
-            type: '',
+            isActive: true,
+            type: 'WORKSHOP',
+            visibleToRoles: [],
+            cohortIds: [],
+            courseIds: [],
         });
         setIsEventsDrawerOpen(true);
     };
@@ -101,12 +129,17 @@ export function Events() {
         e.stopPropagation();
         setEditingEvent(event);
         setEventForm({
-            title: event.title,
+            title: event.title || '',
             description: event.description || '',
-            startDate: event.startDate,
-            endDate: event.endDate,
+            startDate: event.startDate ? new Date(event.startDate).toISOString().split('T')[0] : '',
+            endDate: event.endDate ? new Date(event.endDate).toISOString().split('T')[0] : '',
+            isActive: event.isActive ?? true,
             type: event.type || '',
+            visibleToRoles: event.visibleToRoles || [],
+            cohortIds: event.cohortIds || [],
+            courseIds: event.courseIds || [],
         });
+        console.log(event)
         setIsEventsDrawerOpen(true);
     };
 
@@ -207,7 +240,8 @@ export function Events() {
                             // onClick={() => openDetailDrawer(event)}
                             >
                                 <CardHeader>
-                                    <div className="flex items-center justify-end">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-medium text-gray-700">{event.type}</span>
                                         <span
                                             className={`text-xs px-2 py-0.5 rounded-full font-medium ${event.isActive === true
                                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -270,66 +304,133 @@ export function Events() {
                 isOpen={isEventsDrawerOpen}
                 onClose={closeEventDrawer}
                 title={editingEvent ? 'Update Event Profile' : 'Create Event Profile'}
-                description="Set event details, start date and end date."
-            >
+                description="Set event details, start date and end date.">
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-150 mb-4">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-semibold text-gray-700">Event Status</span>
+                            <span className="text-[10px] text-gray-500">
+                                Set whether this event is active and visible
+                            </span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={eventForm.isActive}
+                                onChange={(e) => setEventForm({ ...eventForm, isActive: e.target.checked })}
+                            />
+                            <div 
+                                className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"
+                                style={{ backgroundColor: eventForm.isActive ? 'var(--primary)' : '#e5e5e5' }}
+                            />
+                            <span className="ml-2.5 text-xs font-medium text-gray-700 min-w-[50px]">
+                                {eventForm.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </label>
+                    </div>
+                </div>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Event Name</label>
+                        <label className="text-xs font-semibold text-gray-700">Event Title</label>
                         <Input
-                            placeholder="e.g. Master of Business Administration"
+                            placeholder="e.g. Financial Management Seminar"
                             value={eventForm.title}
                             onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Description</label>
+                        <label className="text-xs font-semibold text-gray-700">Description</label>
                         <Input
-                            placeholder="Brief event summary"
+                            placeholder="Seminar description..."
                             value={eventForm.description}
                             onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
                         />
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Start Date</label>
-                        <Input
-                            type='date'
-                            placeholder="e.g. 2024-01-01"
-                            value={eventForm.startDate}
-                            onChange={(e) => setEventForm({ ...eventForm, startDate: e.target.value })}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">Start Date</label>
+                            <Input
+                                type="date"
+                                value={eventForm.startDate}
+                                onChange={(e) => setEventForm({ ...eventForm, startDate: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">End Date</label>
+                            <Input
+                                type="date"
+                                value={eventForm.endDate}
+                                onChange={(e) => setEventForm({ ...eventForm, endDate: e.target.value })}
+                            />
+                        </div>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">End Date</label>
-                        <Input
-                            type='date'
-                            placeholder='e.g. 2024-01-10'
-                            value={eventForm.endDate}
-                            onChange={(e) => setEventForm({ ...eventForm, endDate: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">
-                            Event Type
-                        </label>
-
+                        <label className="text-xs font-semibold text-gray-700">Event Type</label>
                         <select
+                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs outline-none focus:ring-1 focus:ring-[var(--primary)]"
                             value={eventForm.type}
-                            onChange={(e) =>
-                                setEventForm({
-                                    ...eventForm,
-                                    type: e.target.value,
-                                })
-                            }
-                            className="w-full border rounded-md px-3 py-2"
+                            onChange={(e) => setEventForm({ ...eventForm, type: e.target.value })}
                         >
-                            <option value="ORIENTATION">Orientation</option>
-                            <option value="WORKSHOP">Workshop</option>
-                            <option value="SEMINAR">Seminar</option>
-                            <option value="GUEST_LECTURE">Guest Lecture</option>
-                            <option value="CONVOCATION">Convocation</option>
-                            <option value="FACULTY_MEETING">Faculty Meeting</option>
-                            <option value="OTHER">Other</option>
+                            <option value="ORIENTATION">ORIENTATION</option>
+                            <option value="WORKSHOP">WORKSHOP</option>
+                            <option value="SEMINAR">SEMINAR</option>
+                            <option value="GUEST_LECTURE">GUEST LECTURE</option>
+                            <option value="CONVOCATION">CONVOCATION</option>
+                            <option value="FACULTY_MEETING">FACULTY MEETING</option>
+                            <option value="OTHER">OTHER</option>
                         </select>
+                    </div>
+                    {/* Target filters */}
+                    <div className="space-y-2 bg-gray-50 p-3 rounded border border-gray-150">
+                        <span className="text-[10px] font-bold text-gray-400 block mb-1">AUDIENCE TARGET FILTERS (LEAVE EMPTY FOR GLOBAL)</span>
+                        <div className="space-y-3 mt-2 text-xs">
+                            <div className="space-y-1">
+                                <label className="font-semibold text-gray-700">Specific Roles Only</label>
+                                <div className="flex gap-2">
+                                    {['STUDENT', 'FACULTY'].map((role) => (
+                                        <label key={role} className="flex items-center gap-1.5 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-gray-300 text-[var(--primary)]"
+                                                checked={eventForm.visibleToRoles.includes(role)}
+                                                onChange={() => {
+                                                    const next = [...eventForm.visibleToRoles];
+                                                    const idx = next.indexOf(role);
+                                                    if (idx > -1) next.splice(idx, 1);
+                                                    else next.push(role);
+                                                    setEventForm({ ...eventForm, visibleToRoles: next });
+                                                }}
+                                            />
+                                            <span>{role}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="font-semibold text-gray-700">Specific Cohorts Only</label>
+                                <div className="max-h-24 overflow-y-auto border border-gray-200 rounded bg-white p-1">
+                                    {cohorts.map((c) => (
+                                        <label key={c.id} className="flex items-center gap-1.5 p-1 cursor-pointer hover:bg-gray-50 rounded">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-gray-300 text-[var(--primary)]"
+                                                checked={eventForm.cohortIds.includes(c.id)}
+                                                onChange={() => {
+                                                    const next = [...eventForm.cohortIds];
+                                                    const idx = next.indexOf(c.id);
+                                                    if (idx > -1) next.splice(idx, 1);
+                                                    else next.push(c.id);
+                                                    setEventForm({ ...eventForm, cohortIds: next });
+                                                }}
+                                            />
+                                            <span className="text-[11px] text-gray-750">{c.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
                         <Button variant="outline" onClick={closeEventDrawer}>Cancel</Button>

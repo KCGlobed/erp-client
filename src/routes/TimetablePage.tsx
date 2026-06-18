@@ -56,6 +56,7 @@ export function TimetablePage() {
     description: '',
     startDate: '',
     endDate: '',
+    isActive: true,
     type: 'WORKSHOP',
     visibleToRoles: [] as string[],
     cohortIds: [] as string[],
@@ -172,6 +173,7 @@ export function TimetablePage() {
       description: '',
       startDate: '',
       endDate: '',
+      isActive: true,
       type: 'WORKSHOP',
       visibleToRoles: [],
       cohortIds: [],
@@ -231,6 +233,7 @@ export function TimetablePage() {
       description: eventForm.description || undefined,
       startDate: new Date(sDate).toISOString(),
       endDate: new Date(eDate).toISOString(),
+      isActive: eventForm.isActive,
       type: eventForm.type,
       visibleToRoles: eventForm.visibleToRoles.length > 0 ? eventForm.visibleToRoles : undefined,
       cohortIds: eventForm.cohortIds.length > 0 ? eventForm.cohortIds : undefined,
@@ -1283,6 +1286,29 @@ export function TimetablePage() {
 
           {schedulerTab === 'event' && (
             <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-150 mb-4">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-semibold text-gray-700">Event Status</span>
+                  <span className="text-[10px] text-gray-500">
+                    Set whether this event is active and visible
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={eventForm.isActive}
+                    onChange={(e) => setEventForm({ ...eventForm, isActive: e.target.checked })}
+                  />
+                  <div 
+                    className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)]"
+                    style={{ backgroundColor: eventForm.isActive ? 'var(--primary)' : '#e5e5e5' }}
+                  />
+                  <span className="ml-2.5 text-xs font-medium text-gray-700 min-w-[50px]">
+                    {eventForm.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </label>
+              </div>
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-gray-700">Event Title</label>
                 <Input
