@@ -25,7 +25,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import Skeleton from '../components/ui/skeleton';
 import { useRef } from 'react';
 
-
 // Helper to format ISO date string to YYYY-MM-DD
 const formatDateForInput = (dateStr: string | null | undefined) => {
     if (!dateStr) return '';
@@ -49,14 +48,17 @@ export function StudentProfilePage() {
     const [saved, setSaved] = useState(false);
     const [draft, setDraft] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
     const bannerInputRef = useRef<HTMLInputElement>(null);
+    const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+    const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
+
 
     const [form, setForm] = useState({
         firstName: '',
         lastName: '',
         gender: '',
         profilePhotoUrl: '',
+        profileBannerUrl: '',
         personalEmail: '',
         mobileNumber: '',
         alternateMobileNumber: '',
@@ -101,8 +103,8 @@ export function StudentProfilePage() {
     const { data, isLoading } = useQuery({
         queryKey: ['student-profile'],
         queryFn: () => apiFetch('/student-profile/me'),
+        staleTime: 5 * 60 * 1000, // 5 minutes stale time to avoid excessive background refetches on tab switch/renders
     });
-    const [bannerUrl, setBannerUrl] = useState(data?.profile?.bannerUrl || '');
 
     useEffect(() => {
         if (!data) return;
@@ -164,7 +166,8 @@ export function StudentProfilePage() {
             firstName: data.firstName ?? '',
             lastName: data.lastName ?? '',
             gender: data.profile?.gender ?? '',
-            profilePhotoUrl: data.profile?.profilePhotoUrl ?? '',
+            profilePhotoUrl: data.profilePhotoUrl ?? '',
+            profileBannerUrl: data.profileBannerUrl ?? '',
             personalEmail: data.profile?.personalEmail ?? '',
             mobileNumber: data.profile?.mobileNumber ?? '',
             alternateMobileNumber: data.profile?.alternateMobileNumber ?? '',
@@ -404,10 +407,10 @@ export function StudentProfilePage() {
         mutationFn: async (file: File) => {
             const formData = new FormData();
 
-            formData.append('profilePhoto', file);
+            formData.append('photo', file);
 
-            return apiFetch('/student-profile/me', {
-                method: 'PATCH',
+            return apiFetch('/student-profile/me/images', {
+                method: 'POST',
                 body: formData,
             });
         },
@@ -439,10 +442,10 @@ export function StudentProfilePage() {
         mutationFn: async (file: File) => {
             const formData = new FormData();
 
-            formData.append('bannerImage', file);
+            formData.append('banner', file);
 
-            return apiFetch('/student-profile/me', {
-                method: 'PATCH',
+            return apiFetch('/student-profile/me/images', {
+                method: 'POST',
                 body: formData,
             });
         },
@@ -451,6 +454,7 @@ export function StudentProfilePage() {
             queryClient.invalidateQueries({
                 queryKey: ['student-profile'],
             });
+            setBannerUrl(null); // Reset preview to display the updated backend URL
         },
     });
 
@@ -507,7 +511,7 @@ export function StudentProfilePage() {
 
 
     return (
-        <div className="max-w-6xl mx-auto px-4 font-sans">
+        <div className="max-w-8xl mx-auto px-4 font-sans">
             {/* ── Top Nav / Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
@@ -659,36 +663,38 @@ export function StudentProfilePage() {
                 </div>
             ) : (
                 <>
-                    <Card
-                        className="relative min-h-[100px] rounded-2xl overflow-hidden shadow-sm border border-neutral-100 mb-6 flex flex-col justify-end"
-                        style={{
-                            backgroundImage: bannerUrl
-                                ? `url(${bannerUrl})`
-                                : 'bg-white',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                        }}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => bannerInputRef.current?.click()}
-                            className="absolute flex gap-2 justify-center items-center top-6 right-6 bg-transparent hover:bg-white text-neutral-800 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-semibold shadow border border-white/20 transition-all cursor-pointer z-20"
+                    <Card className="relative rounded-2xl overflow-hidden shadow-sm border border-neutral-100 mb-6 bg-white">
+                        {/* Banner Background */}
+                        <div
+                            className="h-44 w-full relative bg-neutral-100"
+                            style={{
+                                backgroundImage: (bannerUrl || data?.profileBannerUrl) ? `url(${bannerUrl || data.profileBannerUrl})` : undefined,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center 30%',
+                            }}
                         >
-                            <Edit2 className="h-3.5 w-3.5" />
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => bannerInputRef.current?.click()}
+                                className="absolute flex gap-2 justify-center text-primary items-center top-4 right-4 bg-white hover:bg-gray-100 text-neutral-800 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-semibold shadow border border-white/20 transition-all cursor-pointer z-20"
+                            >
+                                <Edit2 className="h-3.5 w-3.5" />
+                            </button>
 
-                        <input
-                            ref={bannerInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleBannerChange}
-                        />
+                            <input
+                                ref={bannerInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleBannerChange}
+                            />
+                        </div>
 
-                        <CardContent className="relative px-6 py-6 z-10 w-full mt-auto">
-                            <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
+                        {/* Profile Details Container (Overlapping) */}
+                        <CardContent className="px-6 pb-6 pt-0">
+                            <div className="flex flex-col md:flex-row items-center md:items-end gap-6 mt-2 relative z-10">
                                 {/* Avatar section */}
-                                <div className="relative w-24 h-24 shrink-0 rounded-full overflow-hidden group border-2 border-white shadow-md">
+                                <div className="relative w-24 h-24 shrink-0 rounded-full bg-white overflow-hidden group border-4 border-white shadow-md">
                                     <img
                                         src={avatar}
                                         alt={fullName}
@@ -713,14 +719,14 @@ export function StudentProfilePage() {
                                 </div>
 
                                 {/* Title / Role details */}
-                                <div className="flex-1 md:text-left min-w-0">
-                                    <div className="flex flex-col md:flex-row gap-2 mb-1 justify-center md:justify-start">
+                                <div className="flex-1 text-center md:text-left min-w-0 pb-1">
+                                    <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1 justify-center md:justify-start">
                                         <h1 className="text-xl font-bold text-neutral-900 truncate">{fullName || 'Student Profile'}</h1>
-                                        <div className="flex gap-2 justify-center items-center md:justify-start shrink-0">
-                                            <span className="text-[10px] font-bold px-2.5  rounded-full border border-purple-100 py-0.5 text-purple-700 bg-purple-50">
+                                        <div className="flex gap-2 justify-center md:justify-start shrink-0">
+                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-purple-100 text-purple-700 bg-purple-50">
                                                 Verified
                                             </span>
-                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 py-0.5 text-neutral-600">
+                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
                                                 Student
                                             </span>
                                         </div>
@@ -746,7 +752,7 @@ export function StudentProfilePage() {
                                         )}
                                         {form.dateOfJoining && (
                                             <span className="flex items-center gap-1.5">
-                                                <Calendar className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> Joined {form.dateOfJoining}
+                                                <CalendarIcon className="h-3.5 w-3.5" style={{ color: 'rgb(88, 5, 85)' }} /> Joined {form.dateOfJoining}
                                             </span>
                                         )}
                                     </div>

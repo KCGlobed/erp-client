@@ -5,10 +5,10 @@ import {
   Users,
   GraduationCap,
   BookOpen,
-  ClipboardList,
+  // ClipboardList,
   CalendarDays,
-  Wallet,
-  Settings,
+  // Wallet,
+  // Settings,
   FileText,
   LogOut,
   Shield,
@@ -76,19 +76,19 @@ export function Sidebar({ collapsed }: SidebarProps) {
       items: [
         { title: "Courses", url: "/courses", icon: BookOpen },
         { title: "Cohorts", url: "/cohorts", icon: GraduationCap, reqRoles: ['SUPER_ADMIN', 'ADMIN'] },
-        { title: "Attendance", url: "/attendance", icon: ClipboardList, reqRoles: ['FACULTY'] },
-        { title: "Exams", url: "/exams", icon: FileText },
+        // { title: "Attendance", url: "/attendance", icon: ClipboardList, reqRoles: ['FACULTY'] },
+        // { title: "Exams", url: "/exams", icon: FileText },
         { title: "Timetable", url: "/timetable", icon: CalendarDays },
         { title: "Events", url: "/events", icon: CalendarDays, reqRoles: ['SUPER_ADMIN']}
       ],
     },
-    {
-      label: "Operations",
-      items: [
-        { title: "Fees", url: "/fees", icon: Wallet },
-        { title: "Settings", url: "/settings", icon: Settings },
-      ],
-    },
+    // {
+    //   label: "Operations",
+    //   items: [
+    //     { title: "Fees", url: "/fees", icon: Wallet },
+    //     { title: "Settings", url: "/settings", icon: Settings },
+    //   ],
+    // },
     {
       label: "System",
       items: [
