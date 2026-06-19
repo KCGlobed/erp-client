@@ -606,13 +606,13 @@ export function FacultyProfilePage() {
                   <Edit2 className="h-3.5 w-3.5" />
                 </button>
 
-                {/* <input
+                <input
                   ref={bannerInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={handleBannerChange}
-                /> */}
+                />
               </div>
 
               {/* Profile Details Container (Overlapping) */}
