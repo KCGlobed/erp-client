@@ -107,6 +107,9 @@ export function ErpLayout() {
             <div className="relative flex-1 max-w-md focus:outline-none" ref={searchRef}>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                type="search"
+                name="search"
+                autoComplete="off"
                 placeholder="Search students, courses, faculty…"
                 className="pl-9 bg-muted/50 border-transparent outline-hidden focus:outline-none"
                 value={searchQuery}

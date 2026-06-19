@@ -1767,12 +1767,14 @@ export function StudentProfilePage() {
                                         <p className="text-xs text-neutral-450 mt-0.5">Use a strong password you don't reuse elsewhere.</p>
                                     </div>
                                     <CardContent className="p-6 space-y-4">
+                                        <input type="text" name="username" autoComplete="username" className="hidden" style={{ display: 'none' }} defaultValue={authUser?.email || ''} />
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="flex flex-col gap-1.5">
                                                 <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Current Password</label>
                                                 <input
                                                     type="password"
                                                     placeholder="••••••••"
+                                                    autoComplete="current-password"
                                                     className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                                                 />
                                             </div>
@@ -1781,6 +1783,7 @@ export function StudentProfilePage() {
                                                 <input
                                                     type="password"
                                                     placeholder="At least 8 characters"
+                                                    autoComplete="new-password"
                                                     className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                                                 />
                                             </div>
@@ -1788,7 +1791,8 @@ export function StudentProfilePage() {
                                                 <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Confirm New Password</label>
                                                 <input
                                                     type="password"
-                                                    placeholder="Repeat new password"
+                                                    placeholder="Re-enter new password"
+                                                    autoComplete="new-password"
                                                     className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                                                 />
                                             </div>

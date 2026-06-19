@@ -7,13 +7,15 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Drawer } from '../components/ui/Drawer';
+import { Calendar } from '../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Modal } from '../components/ui/Modal';
 
 export function TimetablePage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 5, 1)); // Default to June 2026 (matching seeded data)
+  const [currentDate, setCurrentDate] = useState(new Date()); // Default to June 2026 (matching seeded data)
   const [view, setView] = useState<'day' | 'week' | 'month' | 'year'>('month');
   const [selectedTimelineEvent, setSelectedTimelineEvent] = useState<any | null>(null);
 
@@ -23,6 +25,7 @@ export function TimetablePage() {
   const [selectedDayEvents, setSelectedDayEvents] = useState<any[] | null>(null);
   const [selectedDayLabel, setSelectedDayLabel] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
   const [selectedAttendanceClass, setSelectedAttendanceClass] = useState<any>(null);
@@ -485,9 +488,130 @@ export function TimetablePage() {
             </div>
           </div>
         </div>
-
         {/* Bottom Section: Details and Mini-Calendar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-t border-gray-100 bg-gray-50/10">
+          {/* Details Card */}
+          <div className="md:col-span-2 bg-white p-4 rounded-xl border border-gray-150 shadow-sm flex flex-col justify-between min-h-[220px]">
+            {selectedTimelineEvent ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Event Details ({selectedTimelineEvent.itemType})
+                  </span>
+                  <button 
+                    onClick={() => setSelectedTimelineEvent(null)}
+                    className="text-gray-450 hover:text-gray-700 text-xs font-semibold cursor-pointer"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">
+                    {selectedTimelineEvent.subject?.name || selectedTimelineEvent.name || selectedTimelineEvent.title}
+                  </h3>
+                  {selectedTimelineEvent.subject?.code && (
+                    <p className="text-xs text-gray-500">Subject Code: {selectedTimelineEvent.subject.code}</p>
+                  )}
+                </div>
 
+                <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
+                  {selectedTimelineEvent.startTime && (
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-gray-450" />
+                      <span>
+                        {new Date(selectedTimelineEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {selectedTimelineEvent.endTime && ` – ${new Date(selectedTimelineEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      </span>
+                    </div>
+                  )}
+                  {selectedTimelineEvent.room && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-gray-450" />
+                      <span>Room {selectedTimelineEvent.room}</span>
+                    </div>
+                  )}
+                  {selectedTimelineEvent.faculty && (
+                    <div className="flex items-center gap-1.5 col-span-2">
+                      <User className="w-4 h-4 text-gray-450" />
+                      <span>
+                        Instructor: {selectedTimelineEvent.faculty.firstName} {selectedTimelineEvent.faculty.lastName}
+                      </span>
+                    </div>
+                  )}
+                  {selectedTimelineEvent.type && (
+                    <div className="col-span-2 text-[11px] font-semibold text-primary bg-primary/5 px-2 py-1 rounded inline-block w-max">
+                      Type: {selectedTimelineEvent.type}
+                    </div>
+                  )}
+                  {selectedTimelineEvent.description && (
+                    <p className="col-span-2 text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100">
+                      {selectedTimelineEvent.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-center h-full text-gray-400 py-8">
+                <CalendarIcon className="w-8 h-8 mb-2 text-gray-300" />
+                <p className="text-xs font-medium">Select an activity from the timeline above to view full details.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Mini Calendar Card */}
+          <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm flex flex-col justify-between">
+            <h4 className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide border-b border-gray-100 pb-1.5">
+              {monthNames[miniMonth]} {miniYear}
+            </h4>
+            
+            {/* Week Labels */}
+            <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-gray-400 mb-2">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((lbl, idx) => (
+                <div key={idx}>{lbl}</div>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {miniDaysArray.map(({ date, isCurrentMonth }, idx) => {
+                const isSelected = isSameDay(date, currentDate);
+                const isToday = isSameDay(date, new Date());
+                const dayEvents = getEventsForDay(date);
+                const hasEvents = dayEvents.length > 0;
+
+                let dotColor = '';
+                if (hasEvents) {
+                  const firstEv = dayEvents[0];
+                  if (firstEv.itemType === 'holiday') dotColor = 'bg-rose-500';
+                  else if (firstEv.itemType === 'exam') dotColor = 'bg-purple-500';
+                  else if (firstEv.itemType === 'event') dotColor = 'bg-emerald-500';
+                  else dotColor = 'bg-blue-500';
+                }
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setCurrentDate(date)}
+                    className={`h-6 w-6 text-[10px] font-bold rounded-full flex flex-col items-center justify-center cursor-pointer transition-all relative mx-auto ${
+                      isSelected
+                        ? 'bg-blue-100 text-blue-800'
+                        : isToday
+                          ? 'bg-[var(--primary)] text-white'
+                          : isCurrentMonth
+                            ? 'text-gray-750 hover:bg-gray-100'
+                            : 'text-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>{date.getDate()}</span>
+                    {hasEvents && !isToday && !isSelected && (
+                      <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${dotColor}`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -533,34 +657,50 @@ export function TimetablePage() {
             >
               Time
             </div>
-
             {/* Header Columns 2-8: Day Headers */}
             {weekDays.map((day, dIdx) => {
               const isToday = isSameDay(day, new Date());
               const isSelected = isSameDay(day, currentDate);
+              const dayEvents = getEventsForDay(day);
+              const hasEvents = dayEvents.length > 0;
+
+              let dotColor = '';
+              if (hasEvents) {
+                const firstEv = dayEvents[0];
+                if (firstEv.itemType === 'holiday') dotColor = 'bg-rose-500';
+                else if (firstEv.itemType === 'exam') dotColor = 'bg-purple-500';
+                else if (firstEv.itemType === 'event') dotColor = 'bg-emerald-500';
+                else dotColor = 'bg-blue-500';
+              }
+
               return (
                 <div
                   key={day.toISOString()}
                   onClick={() => {
                     setCurrentDate(day);
                   }}
-                  className={`p-3 text-center border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center ${isToday ? 'bg-amber-50/30' : isSelected ? 'bg-blue-50/20' : 'bg-gray-50/50'
+                  className={`p-3 text-center border-b border-gray-150 cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center relative ${isToday ? 'bg-amber-50/30' : isSelected ? 'bg-blue-50/20' : 'bg-gray-50/50'
                     }`}
                   style={{ gridColumn: dIdx + 2, gridRow: 1 }}
                 >
                   <span className="text-[10px] font-extrabold text-gray-500 block uppercase tracking-wider">
                     {dayNamesShort[dIdx]}
                   </span>
-                  <span
-                    className={`text-sm font-black inline-flex items-center justify-center w-7 h-7 rounded-full mt-1 ${isToday
-                      ? 'bg-[var(--primary)] text-white'
-                      : isSelected
-                        ? 'bg-blue-100 text-blue-800 font-bold'
-                        : 'text-gray-700'
-                      }`}
-                  >
-                    {day.getDate()}
-                  </span>
+                  <div className="relative mt-1 flex flex-col items-center">
+                    <span
+                      className={`text-sm font-black inline-flex items-center justify-center w-7 h-7 rounded-full ${isToday
+                        ? 'bg-[var(--primary)] text-white'
+                        : isSelected
+                          ? 'bg-blue-100 text-blue-800 font-bold'
+                          : 'text-gray-750'
+                        }`}
+                    >
+                      {day.getDate()}
+                    </span>
+                    {hasEvents && (
+                      <span className={`absolute -bottom-1 w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -885,9 +1025,44 @@ export function TimetablePage() {
             <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white text-gray-600 rounded-md" onClick={handlePrev}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" className="h-8 px-3 text-xs font-semibold hover:bg-white text-gray-700 rounded-md border-x border-gray-200" onClick={handleToday}>
-              {getHeaderTitle()}
-            </Button>
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" className="h-8 px-3 text-xs font-semibold hover:bg-white text-gray-700 rounded-md border-x border-gray-200 flex items-center gap-1.5 cursor-pointer">
+                  <span>{getHeaderTitle()}</span>
+                  {/* <span className="text-[10px] text-gray-400 font-normal border-l pl-1.5 ml-0.5 whitespace-nowrap">
+                    Today: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span> */}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-white border border-gray-205 rounded-lg shadow-md z-50 pointer-events-auto" align="center">
+                <div className="p-2 border-b border-gray-100 flex items-center justify-between gap-4">
+                  <span className="text-[10px] font-semibold text-gray-500 pl-1">
+                    Today: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    className="h-7 px-2 text-[10px] font-bold text-primary hover:bg-primary/5 rounded-md cursor-pointer"
+                    onClick={() => {
+                      handleToday();
+                      setIsCalendarOpen(false);
+                    }}
+                  >
+                    Go to Today
+                  </Button>
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={currentDate}
+                  onSelect={(d) => {
+                    if (d) {
+                      setCurrentDate(d);
+                      setIsCalendarOpen(false);
+                    }
+                  }}
+                  className="rounded-md border shadow p-3"
+                />
+              </PopoverContent>
+            </Popover>
             <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white text-gray-600 rounded-md" onClick={handleNext}>
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -1425,10 +1600,10 @@ export function TimetablePage() {
                 <select
                   className="w-full p-2.5 border border-gray-300 rounded-md text-xs outline-none focus:ring-1 focus:ring-[var(--primary)]"
                   value={examForm.cohortId}
-                  onChange={(e) => setExamForm({ ...examForm, cohortId: e.target.value, subjectId: '' })}
+                  onChange={(e) => {setExamForm({ ...examForm, cohortId: e.target.value, subjectId: '' })}}
                 >
                   <option value="">-- Choose Cohort Batch --</option>
-                  {cohorts.map((c) => (
+                  {cohorts?.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -1443,7 +1618,7 @@ export function TimetablePage() {
                 >
                   <option value="">-- Choose Subject --</option>
                   {/* Pull subjects for cohort */}
-                  {cohorts.find((c) => c.id === examForm.cohortId)?.cohortCourses?.flatMap((cc: any) => cc.curriculum.subjects).map((s: any) => (
+                  {(cohorts.find((c) => c.id === examForm.cohortId)?.cohortCourses?.flatMap((cc: any) => cc.curriculum?.subjects || []) || []).map((s: any) => (
                     <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
                   ))}
                 </select>
