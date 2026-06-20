@@ -1212,47 +1212,74 @@ export function FacultyProfilePage() {
               {activeTab === 'security' && (
                 <div className="animate-fade-in">
                   <Card className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+
                     <div className="px-6 py-4 border-b border-neutral-100">
                       <h2 className="text-base font-bold text-neutral-800">Password</h2>
                       <p className="text-xs text-neutral-450 mt-0.5">Use a strong password you don't reuse elsewhere.</p>
                     </div>
+
                     <CardContent className="p-6 space-y-4">
+                      <input
+                        type="text"
+                        name="username"
+                        autoComplete="username"
+                        className="hidden"
+                        style={{ display: 'none' }}
+                        defaultValue={authUser?.email || ''}
+                      />
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Current Password</label>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                            Current Password
+                          </label>
                           <input
                             type="password"
                             placeholder="••••••••"
+                            autoComplete="current-password"
                             className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                           />
                         </div>
+
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">New Password</label>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                            New Password
+                          </label>
                           <input
                             type="password"
                             placeholder="At least 8 characters"
+                            autoComplete="new-password"
                             className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                           />
                         </div>
+
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Confirm New Password</label>
+                          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                            Confirm New Password
+                          </label>
                           <input
                             type="password"
-                            placeholder="Repeat new password"
+                            placeholder="Re-enter new password"
+                            autoComplete="new-password"
                             className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                           />
                         </div>
+
                       </div>
+
                       <div className="flex justify-end pt-2">
                         <button
                           type="button"
                           className="h-9 px-5 rounded-lg text-xs font-semibold text-white transition-all shadow-sm cursor-pointer hover:opacity-95"
                           style={{ backgroundColor: 'rgb(88, 5, 85)' }}
                         >
-                          Update password
+                          Update Password
                         </button>
                       </div>
+
                     </CardContent>
+
                   </Card>
                 </div>
               )}

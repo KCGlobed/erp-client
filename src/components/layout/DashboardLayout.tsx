@@ -142,7 +142,9 @@ export function DashboardLayout() {
               style={{ color: 'var(--muted-foreground)' }}
             />
             <input
-              type="text"
+              type="search"
+              name="search"
+              autoComplete="off"
               placeholder="Search students, courses, faculty…"
               className="w-full h-9 pl-9 pr-4 rounded-md text-sm outline-none transition-colors"
               style={{

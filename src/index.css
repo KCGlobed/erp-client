@@ -91,12 +91,10 @@
 }
 
 .shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.7) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%);
   transform: translateX(-100%);
   animation: shimmerMove 1.5s infinite;
 }
@@ -116,4 +114,37 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* timetable.css */
+
+.day-view-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.day-view-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 9999px;
+}
+
+.day-view-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 9999px;
+}
+
+.day-view-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Remove left/right arrows */
+.day-view-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Firefox */
+.day-view-scrollbar {
+  scrollbar-color: var(--primary) #f3f4f6;
+  scrollbar-width: thin;
 }
