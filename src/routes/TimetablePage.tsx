@@ -350,14 +350,15 @@ export function TimetablePage() {
   const renderDayView = () => {
     const dayEvents = getEventsForDay(currentDate);
     const holidays = dayEvents.filter((ev) => ev.itemType === 'holiday');
-    const timedEvents = dayEvents.filter((ev) => ev.itemType !== 'holiday');
+    const timedEvents = dayEvents;
 
     const hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
     const getEventsStartingInHour = (hr: number) => {
       return timedEvents.filter((ev) => {
-        if (!ev.startTime) return false;
-        const d = new Date(ev.startTime);
+        const timeVal = ev.startTime || ev.startDate;
+        if (!timeVal) return false;
+        const d = new Date(timeVal);
         return d.getHours() === hr;
       });
     };
@@ -402,186 +403,34 @@ export function TimetablePage() {
 
     return (
       <div className="space-y-6 bg-white border border-gray-150 rounded-xl shadow-sm overflow-hidden">
-
+        {holidays.length > 0 && (
+          <div className="bg-rose-50 border-b border-rose-100 p-4 space-y-2">
+            {holidays.map((h, hIdx) => (
+              <div key={hIdx} className="flex flex-col items-start justify-center text-xs font-bold text-rose-700">
+                <span className="block mb-0.5 text-[9px] text-rose-400 uppercase tracking-widest font-extrabold">holiday</span>
+                <span className="leading-snug text-sm">{h.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className=" border-gray-100">
-          <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="overflow-x-auto day-view-scrollbar">
             <div
               className="grid min-w-[2400px] border border-gray-100 rounded-xl divide-x divide-y divide-gray-100 bg-gray-50/20"
               style={{
-                gridTemplateColumns: 'repeat(24, minmax(100px, 1fr))',
+                gridTemplateColumns: 'repeat(24, minmax(200px, 1fr))',
                 gridTemplateRows: 'auto 380px',
               }}
             >
               {/* Header Columns 1-24: Hour Headers */}
-              {hours.map((hr, hrIdx) => (
-                <div
-                  key={`header-${hr}`}
-                  className="p-3 text-center border-b border-r border-gray-100 bg-gray-50/50 font-bold text-xs text-gray-400 select-none flex items-center justify-center"
-                  style={{ gridColumn: hrIdx + 1, gridRow: 1 }}
-                >
-                  {formatHour(hr)}
-                </div>
-              ))}
-
-              {/* Row 2, Columns 1-24: Hour Cells / Holiday Span */}
-              {holidays.length > 0 ? (
-                <div
-                  className="p-2 border-r border-gray-100 flex items-center justify-start bg-transparent h-[400px]"
-                  style={{ gridColumn: '1 / span 24', gridRow: 2 }}
-                >
-                  {holidays.map((h, hIdx) => (
-                    <div
-                      key={hIdx}
-                      className="w-full h-full flex flex-col items-start justify-center text-xs font-bold text-rose-700 p-3 text-left"
-                    >
-                      <span className="block mb-1 text-[9px] text-rose-400 uppercase tracking-widest font-extrabold">holiday</span>
-                      <span className="leading-snug text-sm">{h.name}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                hours.map((hr, hrIdx) => {
-                  const hourEvents = getEventsStartingInHour(hr);
-                  return (
-                    <div
-                      key={`cell-${hr}`}
-                      className="p-2 border-r border-gray-100 flex flex-col justify-start gap-1 h-[380px] bg-white overflow-y-auto"
-                      style={{ gridColumn: hrIdx + 1, gridRow: 2 }}
-                    >
-                      {hourEvents.length > 0 ? (
-                        hourEvents.map((ev, evIdx) => {
-                          let colorClass = 'bg-blue-50 text-blue-700 border-blue-100';
-                          if (ev.itemType === 'holiday') colorClass = 'bg-rose-50 text-rose-700 border-rose-100';
-                          if (ev.itemType === 'exam') colorClass = 'bg-purple-50 text-purple-700 border-purple-100';
-                          if (ev.itemType === 'event') colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-100';
-
-                          const isSelected = selectedTimelineEvent?.id === ev.id && selectedTimelineEvent?.itemType === ev.itemType;
-
-                          return (
-                            <div
-                              key={evIdx}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedTimelineEvent(ev);
-                              }}
-                              className={`text-[9px] font-medium leading-tight truncate px-1 py-0.5 rounded border cursor-pointer hover:opacity-80 transition-all ${colorClass} ${isSelected ? 'ring-2 ring-[var(--primary)]' : ''
-                                }`}
-                              title={`${ev.subject?.name || ev.name || ev.title}${ev.room ? ` (Room ${ev.room})` : ''}`}
-                            >
-                              {ev.subject?.name || ev.name || ev.title}
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="flex flex-col justify-between h-full py-4 opacity-40">
-                          <div className="border-b border-dashed border-gray-250 w-full" />
-                          <div className="border-b border-dashed border-gray-250 w-full" />
-                          <div className="border-b border-dashed border-gray-250 w-full" />
-                          <div className="border-b border-dashed border-gray-250 w-full" />
-                          <div className="border-b border-dashed border-gray-250 w-full" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-        {/* Bottom Section: Details and Mini-Calendar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-t border-gray-100 bg-gray-50/10">
-          {/* Details Card */}
-          <div className="md:col-span-2 bg-white p-4 rounded-xl border border-gray-150 shadow-sm flex flex-col justify-between min-h-[220px]">
-            {selectedTimelineEvent ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    Event Details ({selectedTimelineEvent.itemType})
-                  </span>
-                  <button 
-                    onClick={() => setSelectedTimelineEvent(null)}
-                    className="text-gray-450 hover:text-gray-700 text-xs font-semibold cursor-pointer"
-                  >
-                    Clear Selection
-                  </button>
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">
-                    {selectedTimelineEvent.subject?.name || selectedTimelineEvent.name || selectedTimelineEvent.title}
-                  </h3>
-                  {selectedTimelineEvent.subject?.code && (
-                    <p className="text-xs text-gray-500">Subject Code: {selectedTimelineEvent.subject.code}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
-                  {selectedTimelineEvent.startTime && (
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-gray-450" />
-                      <span>
-                        {new Date(selectedTimelineEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {selectedTimelineEvent.endTime && ` – ${new Date(selectedTimelineEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-                      </span>
-                    </div>
-                  )}
-                  {selectedTimelineEvent.room && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-gray-450" />
-                      <span>Room {selectedTimelineEvent.room}</span>
-                    </div>
-                  )}
-                  {selectedTimelineEvent.faculty && (
-                    <div className="flex items-center gap-1.5 col-span-2">
-                      <User className="w-4 h-4 text-gray-450" />
-                      <span>
-                        Instructor: {selectedTimelineEvent.faculty.firstName} {selectedTimelineEvent.faculty.lastName}
-                      </span>
-                    </div>
-                  )}
-                  {selectedTimelineEvent.type && (
-                    <div className="col-span-2 text-[11px] font-semibold text-primary bg-primary/5 px-2 py-1 rounded inline-block w-max">
-                      Type: {selectedTimelineEvent.type}
-                    </div>
-                  )}
-                  {selectedTimelineEvent.description && (
-                    <p className="col-span-2 text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100">
-                      {selectedTimelineEvent.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center h-full text-gray-400 py-8">
-                <CalendarIcon className="w-8 h-8 mb-2 text-gray-300" />
-                <p className="text-xs font-medium">Select an activity from the timeline above to view full details.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Mini Calendar Card */}
-          <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm flex flex-col justify-between">
-            <h4 className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide border-b border-gray-100 pb-1.5">
-              {monthNames[miniMonth]} {miniYear}
-            </h4>
-            
-            {/* Week Labels */}
-            <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-gray-400 mb-2">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((lbl, idx) => (
-                <div key={idx}>{lbl}</div>
-              ))}
-            </div>
-
-            {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {miniDaysArray.map(({ date, isCurrentMonth }, idx) => {
-                const isSelected = isSameDay(date, currentDate);
-                const isToday = isSameDay(date, new Date());
-                const dayEvents = getEventsForDay(date);
-                const hasEvents = dayEvents.length > 0;
+              {hours.map((hr, hrIdx) => {
+                const hourEvents = getEventsStartingInHour(hr);
 
                 let dotColor = '';
-                if (hasEvents) {
-                  const firstEv = dayEvents[0];
+
+                if (hourEvents.length > 0) {
+                  const firstEv = hourEvents[0];
+
                   if (firstEv.itemType === 'holiday') dotColor = 'bg-rose-500';
                   else if (firstEv.itemType === 'exam') dotColor = 'bg-purple-500';
                   else if (firstEv.itemType === 'event') dotColor = 'bg-emerald-500';
@@ -590,21 +439,62 @@ export function TimetablePage() {
 
                 return (
                   <div
-                    key={idx}
-                    onClick={() => setCurrentDate(date)}
-                    className={`h-6 w-6 text-[10px] font-bold rounded-full flex flex-col items-center justify-center cursor-pointer transition-all relative mx-auto ${
-                      isSelected
-                        ? 'bg-blue-100 text-blue-800'
-                        : isToday
-                          ? 'bg-[var(--primary)] text-white'
-                          : isCurrentMonth
-                            ? 'text-gray-750 hover:bg-gray-100'
-                            : 'text-gray-300 hover:bg-gray-50'
-                    }`}
+                    key={`header-${hr}`}
+                    className="p-3 text-center border-b border-r border-gray-100 bg-gray-50/50 font-bold text-xs text-gray-400 select-none flex flex-col items-center justify-center"
+                    style={{ gridColumn: hrIdx + 1, gridRow: 1 }}
                   >
-                    <span>{date.getDate()}</span>
-                    {hasEvents && !isToday && !isSelected && (
-                      <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${dotColor}`} />
+                    <span>{formatHour(hr)}</span>
+
+                    {hourEvents.length > 0 && (
+                      <span
+                        className={`mt-1 w-1.5 h-1.5 rounded-full ${dotColor}`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Row 2, Columns 1-24: Hour Cells */}
+              {hours.map((hr, hrIdx) => {
+                const hourEvents = getEventsStartingInHour(hr);
+                return (
+                  <div
+                    key={`cell-${hr}`}
+                    className="p-2 border-r border-gray-100 flex flex-col justify-start gap-1 h-[380px] bg-white overflow-y-auto overflow-x-visible"
+                    style={{ gridColumn: hrIdx + 1, gridRow: 2 }}
+                  >
+                    {hourEvents.length > 0 ? (
+                      hourEvents.map((ev, evIdx) => {
+                        let colorClass = 'bg-blue-50 text-blue-700 border-blue-100';
+                        if (ev.itemType === 'holiday') colorClass = 'bg-rose-50 text-rose-700 border-rose-100';
+                        if (ev.itemType === 'exam') colorClass = 'bg-purple-50 text-purple-700 border-purple-100';
+                        if (ev.itemType === 'event') colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+
+                        const isSelected = selectedTimelineEvent?.id === ev.id && selectedTimelineEvent?.itemType === ev.itemType;
+
+                        return (
+                          <div
+                            key={evIdx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTimelineEvent(ev);
+                            }}
+                            className={`text-[10px] font-medium leading-tight px-2 py-1 rounded border-l-4 cursor-pointer hover:opacity-80 transition-all inline-block whitespace-nowrap w-max ${colorClass} ${isSelected ? 'ring-2 ring-[var(--primary)]' : ''
+                              }`}
+                            title={`${ev.subject?.name || ev.name || ev.title}${ev.room ? ` (Room ${ev.room})` : ''}`}
+                          >
+                            {ev.subject?.name || ev.name || ev.title}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex flex-col justify-between h-full py-4 opacity-40">
+                        <div className="border-b border-dashed border-gray-250 w-full" />
+                        <div className="border-b border-dashed border-gray-250 w-full" />
+                        <div className="border-b border-dashed border-gray-250 w-full" />
+                        <div className="border-b border-dashed border-gray-250 w-full" />
+                        <div className="border-b border-dashed border-gray-250 w-full" />
+                      </div>
                     )}
                   </div>
                 );
@@ -622,15 +512,21 @@ export function TimetablePage() {
     const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const hours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
 
-    const getEventsStartingInHourForDay = (day: Date, hr: number) => {
-      const dayEvents = getEventsForDay(day);
-      const timedEvents = dayEvents.filter((ev) => ev.itemType !== 'holiday');
-      return timedEvents.filter((ev) => {
-        if (!ev.startTime) return false;
-        const d = new Date(ev.startTime);
-        return d.getHours() === hr;
-      });
-    };
+const getEventsStartingInHourForDay = (day: Date, hr: number) => {
+  const dayEvents = getEventsForDay(day);
+
+  return dayEvents.filter((ev) => {
+    if (ev.itemType === 'holiday') return false;
+
+    const timeValue = ev.startTime || ev.startDate;
+
+    if (!timeValue) return false;
+
+    const d = new Date(timeValue);
+
+    return d.getHours() === hr;
+  });
+};
 
     const formatHour = (hr: number) => {
       if (hr === 12) return 'Midday';
@@ -646,8 +542,8 @@ export function TimetablePage() {
           <div
             className="grid min-w-[1000px] border border-gray-100 rounded-xl divide-x divide-y divide-gray-100 bg-gray-50/20"
             style={{
-              gridTemplateColumns: '100px repeat(7, minmax(120px, 1fr))',
-              gridTemplateRows: `auto repeat(${hours.length}, minmax(60px, auto))`
+              gridTemplateColumns: '120px repeat(7, minmax(180px, 1fr))',
+              gridTemplateRows: '60px repeat(24, 60px)',
             }}
           >
             {/* Header Column 1: Time label header */}
@@ -778,7 +674,7 @@ export function TimetablePage() {
                           <div
                             key={evIdx}
                             onClick={() => handleDayClick(day)}
-                            className={`text-[9px] font-medium leading-tight truncate px-1 py-0.5 rounded border cursor-pointer hover:opacity-80 transition-opacity ${colorClass}`}
+                            className={`text-[9px] font-medium leading-tight px-1 py-0.5 rounded border cursor-pointer hover:opacity-80 transition-opacity ${colorClass}`}
                             title={`${ev.subject?.name || ev.name || ev.title}${ev.room ? ` (Room ${ev.room})` : ''}`}
                           >
                             {ev.subject?.name || ev.name || ev.title}
@@ -1475,7 +1371,7 @@ export function TimetablePage() {
                     checked={eventForm.isActive}
                     onChange={(e) => setEventForm({ ...eventForm, isActive: e.target.checked })}
                   />
-                  <div 
+                  <div
                     className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)]"
                     style={{ backgroundColor: eventForm.isActive ? 'var(--primary)' : '#e5e5e5' }}
                   />
@@ -1600,7 +1496,7 @@ export function TimetablePage() {
                 <select
                   className="w-full p-2.5 border border-gray-300 rounded-md text-xs outline-none focus:ring-1 focus:ring-[var(--primary)]"
                   value={examForm.cohortId}
-                  onChange={(e) => {setExamForm({ ...examForm, cohortId: e.target.value, subjectId: '' })}}
+                  onChange={(e) => { setExamForm({ ...examForm, cohortId: e.target.value, subjectId: '' }) }}
                 >
                   <option value="">-- Choose Cohort Batch --</option>
                   {cohorts?.map((c) => (
