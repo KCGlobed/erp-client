@@ -15,42 +15,48 @@ export function Exams() {
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
 
-    // const canViewExam =
-    //     user?.roles.includes('SUPER_ADMIN') ||
-    //     user?.roles.includes('ADMIN') ||
-    //     user?.roles.includes('FACULTY');
 
     const [isExamsDrawerOpen, setIsExamsDrawerOpen] = useState(false);
     const [editingExam, setEditingExam] = useState<any>(null);
 
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-    const [examCategory, setExamCategory] = useState('');
+    // const [examCategory, setExamCategory] = useState('');
     const [excelFile, setExcelFile] = useState<File | null>(null);
 
     // Form states for Exam
     const [examForm, setExamForm] = useState({
         name: '',
+        description: '',
+        cohortId: '',
+        courseId: '',
+        subjectId: '',
         date: '',
-        marks: '',
-        no_of_questions: '',
+        startTime: '',
+        endTime: '',
+        room: '',
+        examFormat: '',
         type: '',
-        course: '',
-        duration: '',
-        startDate: '',
-        endDate: '',
+        marks: '',
+        numQuestions: '',
+        isActive: true,
     });
 
     const resetExamForm = () => {
         setExamForm({
             name: '',
+            description: '',
+            cohortId: '',
+            courseId: '',
+            subjectId: '',
             date: '',
-            marks: '',
-            no_of_questions: '',
+            startTime: '',
+            endTime: '',
+            room: '',
+            examFormat: '',
             type: '',
-            course: '',
-            duration: '',
-            startDate: '',
-            endDate: '',
+            marks: '',
+            numQuestions: '',
+            isActive: true,
         });
     };
 
@@ -62,10 +68,16 @@ export function Exams() {
         queryFn: () => apiFetch('/calendar/exams'),
     });
 
-    // const { data: cohorts = [] } = useQuery<any[]>({
-    //     queryKey: ['cohorts'],
-    //     queryFn: () => apiFetch('/cohorts'),
-    // });
+
+    const { data: cohorts = [] } = useQuery<any[]>({
+        queryKey: ['cohorts'],
+        queryFn: () => apiFetch('/cohorts'),
+    });
+
+    const { data: courses = [] } = useQuery<any[]>({
+        queryKey: ['courses'],
+        queryFn: () => apiFetch('/courses'),
+    });
 
     // Mutations
     const createExams = useMutation({
@@ -79,7 +91,10 @@ export function Exams() {
 
     const updateExams = useMutation({
         mutationFn: (data: any) =>
-            apiFetch(`/calendar/exams/${editingExam.id}`, { method: 'POST', body: JSON.stringify(data) }),
+            apiFetch(`/calendar/exams/${editingExam.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify(data),
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exams'] });
             closeExamsDrawer();
@@ -118,14 +133,19 @@ export function Exams() {
         setEditingExam(null);
         setExamForm({
             name: '',
+            description: '',
+            cohortId: '',
+            courseId: '',
+            subjectId: '',
             date: '',
-            marks: '',
-            no_of_questions: '',
+            startTime: '',
+            endTime: '',
+            room: '',
+            examFormat: '',
             type: '',
-            course: '',
-            duration: '',
-            startDate: '',
-            endDate: '',
+            marks: '',
+            numQuestions: '',
+            isActive: true,
         });
         setIsExamsDrawerOpen(true);
     };
@@ -133,17 +153,22 @@ export function Exams() {
     const openEditExams = (exam: any, e: React.MouseEvent) => {
         e.stopPropagation();
         setEditingExam(exam);
-        // setExamForm({
-        //     name: exams.name || '',
-        //     date: exams.date || '',
-        //     marks: exams.marks || '',
-        //     no_of_questions: exams.no_of_questions || '',
-        //     type: exams.type || '',
-        //     course: exams.course || '',
-        //     duration: exams.duration || '',
-        //     startDate: exams.startDate ? new Date(exam.startDate).toISOString().split('T')[0] : '',
-        //     endDate: exams.endDate ? new Date(exam.endDate).toISOString().split('T')[0] : '',
-        // });
+        setExamForm({
+            name: exam.name || '',
+            description: exam.description || '',
+            cohortId: exam.cohortId || '',
+            courseId: exam.courseId || '',
+            subjectId: exam.subjectId || '',
+            date: exam.date ? new Date(exam.date).toISOString().split('T')[0] : '',
+            startTime: exam.startTime ? new Date(exam.startTime).toISOString().slice(11, 16) : '',
+            endTime: exam.endTime ? new Date(exam.endTime).toISOString().slice(11, 16) : '',
+            room: exam.room || '',
+            examFormat: exam.examFormat || '',
+            type: exam.type || '',
+            marks: exam.marks?.toString() || '',
+            numQuestions: exam.numQuestions?.toString() || '',
+            isActive: exam.isActive ?? true,
+        });
         console.log(exam)
         setIsExamsDrawerOpen(true);
     };
@@ -154,17 +179,47 @@ export function Exams() {
     };
 
     const handleExamsSubmit = () => {
+        const payload = {
+            ...examForm,
+
+            date: new Date(examForm.date).toISOString(),
+
+            startTime: new Date(
+                `${examForm.date}T${examForm.startTime}:00`
+            ).toISOString(),
+
+            endTime: new Date(
+                `${examForm.date}T${examForm.endTime}:00`
+            ).toISOString(),
+        };
+
+        console.log(payload);
+
         if (editingExam) {
-            updateExams.mutate(examForm);
+            updateExams.mutate(payload);
         } else {
-            createExams.mutate(examForm);
+            createExams.mutate(payload);
         }
     };
 
     const filteredExams = exams.filter(
         (exam) =>
-            exam.title?.toLowerCase().includes(search.toLowerCase())
+            exam.name?.toLowerCase().includes(search.toLowerCase())
     );
+
+    const selectedCohortDetails =
+        cohorts.find((c) => c.id === examForm.cohortId);
+
+    const selectedCohortCourses =
+        selectedCohortDetails?.cohortCourses || [];
+
+    const selectedCourse =
+        courses.find((c) => c.id === examForm.courseId);
+
+    const availableSubjects =
+        selectedCourse?.curriculums?.flatMap(
+            (curr: any) => curr.subjects || []
+        ) || [];
 
     return (
         <>
@@ -201,108 +256,112 @@ export function Exams() {
                 </div>
             </div>
 
-            {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <Card
-                            key={i}
-                            className="border border-gray-100 flex flex-col justify-between h-[250px]"
-                        >
-                            <CardHeader className="pb-4 flex-1 space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <Skeleton className="h-5 w-16 rounded" />
-                                    <Skeleton className="h-5 w-14 rounded-full" />
-                                </div>
-                                <Skeleton className="h-6 w-3/4 rounded mt-2" />
-                                <div className="space-y-1.5 mt-2">
-                                    <Skeleton className="h-4 w-full rounded" />
-                                    <Skeleton className="h-4 w-5/6 rounded" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="pb-4 space-y-3">
-                                <div className="flex gap-4">
-                                    <Skeleton className="h-4 w-12 rounded" />
-                                    <Skeleton className="h-4 w-20 rounded" />
-                                </div>
-                                <div className="flex justify-between items-center pt-2 border-t border-gray-50">
-                                    <Skeleton className="h-3.5 w-24 rounded" />
-                                    <Skeleton className="h-3.5 w-8 rounded" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            ) : filteredExams.length === 0 ? (
-                <div className="text-center py-20 text-sm text-gray-500">No exams found matching "{search}"</div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredExams.map((exam: any) => {
-                        // const latestVersion = event.curriculums?.[0]?.version || 'None';
-                        return (
-                            <Card
-                                key={exam.id}
-                                className="cursor-pointer hover:shadow-md transition-all duration-200 group relative border border-gray-100 flex flex-col justify-between"
-                            // onClick={() => openDetailDrawer(exam)}
-                            >
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-medium text-gray-700">{exam.type}</span>
-                                        <span
-                                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${exam.isActive === true
-                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                : 'bg-red-50 text-red-700 border border-red-200'
-                                                }`}
-                                        >
-                                            {exam.isActive ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </div>
-                                    <CardTitle className="mt-2 text-lg text-gray-900 group-hover:text-[var(--primary)] transition-colors">
-                                        {exam.title}
-                                    </CardTitle>
-                                    <CardDescription className="line-clamp-2 mt-1">
-                                        {exam.description || 'No description provided.'}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            {new Date(exam.startDate).toLocaleDateString()}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            {new Date(exam.endDate).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="flex justify-end items-center bg-gray-50/50 rounded-b-xl border-t border-gray-100/50 py-3">
-                                    {isAdmin && (
-                                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7 text-gray-500"
-                                                onClick={(e) => openEditExams(exam, e)}
-                                            >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                            </Button>
-
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7 text-red-500 hover:bg-red-50"
-                                                onClick={() => setConfirmDelete(exam.id)}
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </Button>
+            {
+                isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" >
+                        {
+                            Array.from({ length: 6 }).map((_, i) => (
+                                <Card
+                                    key={i}
+                                    className="border border-gray-100 flex flex-col justify-between h-[250px]"
+                                >
+                                    <CardHeader className="pb-4 flex-1 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <Skeleton className="h-5 w-16 rounded" />
+                                            <Skeleton className="h-5 w-14 rounded-full" />
                                         </div>
-                                    )}
-                                </CardFooter>
-                            </Card>
-                        );
-                    })}
-                </div>
-            )}
+                                        <Skeleton className="h-6 w-3/4 rounded mt-2" />
+                                        <div className="space-y-1.5 mt-2">
+                                            <Skeleton className="h-4 w-full rounded" />
+                                            <Skeleton className="h-4 w-5/6 rounded" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pb-4 space-y-3">
+                                        <div className="flex gap-4">
+                                            <Skeleton className="h-4 w-12 rounded" />
+                                            <Skeleton className="h-4 w-20 rounded" />
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-gray-50">
+                                            <Skeleton className="h-3.5 w-24 rounded" />
+                                            <Skeleton className="h-3.5 w-8 rounded" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        }
+                    </div >
+                ) : filteredExams.length === 0 ? (
+                    <div className="text-center py-20 text-sm text-gray-500">No exams found matching "{search}"</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredExams.map((exam: any) => {
+                            // const latestVersion = event.curriculums?.[0]?.version || 'None';
+                            return (
+                                <Card
+                                    key={exam.id}
+                                    className="cursor-pointer hover:shadow-md transition-all duration-200 group relative border border-gray-100 flex flex-col justify-between"
+                                // onClick={() => openDetailDrawer(exam)}
+                                >
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-medium text-gray-700">{exam.type}</span>
+                                            <span
+                                                className={`text-xs px-2 py-0.5 rounded-full font-medium ${exam.isActive === true
+                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                                    }`}
+                                            >
+                                                {exam.isActive ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </div>
+                                        <CardTitle className="mt-2 text-lg text-gray-900 group-hover:text-[var(--primary)] transition-colors">
+                                            {exam.name}
+                                        </CardTitle>
+                                        <CardDescription className="line-clamp-2 mt-1">
+                                            {exam.description || 'No description provided.'}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                                {new Date(exam.startTime).toLocaleTimeString()}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                                {new Date(exam.endTime).toLocaleTimeString()}
+                                            </span>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="flex justify-end items-center bg-gray-50/50 rounded-b-xl border-t border-gray-100/50 py-3">
+                                        {isAdmin && (
+                                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-gray-500"
+                                                    onClick={(e) => openEditExams(exam, e)}
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </Button>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-red-500 hover:bg-red-50"
+                                                    onClick={() => setConfirmDelete(exam.id)}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardFooter>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                )
+            }
 
 
             <Drawer
@@ -312,7 +371,7 @@ export function Exams() {
                 description="Set exam details, start date and end date.">
 
                 <div className="space-y-4">
-                    {/* <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-150 mb-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-150 mb-4">
                         <div className="flex flex-col gap-0.5">
                             <span className="text-xs font-semibold text-gray-700">Exam Status</span>
                             <span className="text-[10px] text-gray-500">
@@ -334,7 +393,7 @@ export function Exams() {
                                 {examForm.isActive ? 'Active' : 'Inactive'}
                             </span>
                         </label>
-                    </div> */}
+                    </div>
                 </div>
                 <div className="space-y-4">
                     <div className="space-y-2">
@@ -347,37 +406,157 @@ export function Exams() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">Course</label>
+                        <label className="text-xs font-semibold text-gray-700">Description</label>
                         <Input
-                            placeholder="e.g. MBA"
-                            value={examForm.course}
-                            onChange={(e) => setExamForm({ ...examForm, course: e.target.value })}
+                            placeholder="e.g. ACCA"
+                            value={examForm.description}
+                            onChange={(e) => setExamForm({ ...examForm, description: e.target.value })}
                         />
                     </div>
+
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">Marks</label>
+                        <label className="text-xs font-semibold text-gray-700">Room</label>
                         <Input
-                            placeholder="e.g. 79"
-                            value={examForm.marks}
-                            onChange={(e) => setExamForm({ ...examForm, marks: e.target.value })}
+                            placeholder="Room A101"
+                            value={examForm.room}
+                            onChange={(e) =>
+                                setExamForm({
+                                    ...examForm,
+                                    room: e.target.value,
+                                })
+                            }
                         />
                     </div>
+
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">Number of Questions</label>
-                        <Input
-                            placeholder="e.g. 60"
-                            value={examForm.name}
-                            onChange={(e) => setExamForm({ ...examForm, name: e.target.value })}
-                        />
+                        <label className="text-xs font-semibold text-gray-700">
+                            Exam Type
+                        </label>
+
+                        <select
+                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                            value={examForm.type}
+                            onChange={(e) =>
+                                setExamForm({
+                                    ...examForm,
+                                    type: e.target.value,
+                                })
+                            }
+                        >
+                            <option value="">-- Select Exam Type --</option>
+                            <option value="MID_TERM">MID TERM</option>
+                            <option value="FINAL">FINAL</option>
+                            <option value="VIVA">VIVA</option>
+                            <option value="PRACTICAL">PRACTICAL</option>
+                            <option value="ASSIGNMENT">ASSIGNMENT</option>
+                        </select>
                     </div>
+
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">Duration</label>
-                        <Input
-                            // type='number'
-                            placeholder="e.g. 90 mins"
-                            value={examForm.duration}
-                            onChange={(e) => setExamForm({ ...examForm, duration: e.target.value })}
-                        />
+                        <label className="text-xs font-semibold text-gray-700">
+                            Select Cohort
+                        </label>
+
+                        <select
+                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                            value={examForm.cohortId}
+                            onChange={(e) =>
+                                setExamForm({
+                                    ...examForm,
+                                    cohortId: e.target.value,
+                                    courseId: '',
+                                    subjectId: '',
+                                })
+                            }
+                        >
+                            <option value="">-- Choose Cohort --</option>
+
+                            {cohorts.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-700">
+                            Select Course
+                        </label>
+
+                        <select
+                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                            value={examForm.courseId}
+                            disabled={!examForm.cohortId}
+                            onChange={(e) =>
+                                setExamForm({
+                                    ...examForm,
+                                    courseId: e.target.value,
+                                    subjectId: '',
+                                })
+                            }
+                        >
+                            <option value="">-- Choose Course --</option>
+
+                            {selectedCohortCourses.map((cc: any) => (
+                                <option
+                                    key={cc.course.id}
+                                    value={cc.course.id}
+                                >
+                                    {cc.course.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-700">
+                            Select Subject
+                        </label>
+
+                        <select
+                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                            value={examForm.subjectId}
+                            disabled={!examForm.courseId}
+                            onChange={(e) =>
+                                setExamForm({
+                                    ...examForm,
+                                    subjectId: e.target.value,
+                                })
+                            }
+                        >
+                            <option value="">-- Choose Subject --</option>
+
+                            {availableSubjects.map((s: any) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name} ({s.code})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className='grid grid-cols-2 gap-4'>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">Marks</label>
+                            <Input
+                                placeholder="e.g. 79"
+                                value={examForm.marks}
+                                onChange={(e) => setExamForm({ ...examForm, marks: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">Number of Questions</label>
+                            <Input
+                                placeholder="e.g. 60"
+                                value={examForm.numQuestions}
+                                onChange={(e) =>
+                                    setExamForm({
+                                        ...examForm,
+                                        numQuestions: e.target.value
+                                    })
+                                }
+                            />
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-gray-700">Exam Date</label>
@@ -388,60 +567,58 @@ export function Exams() {
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold text-gray-700">Start Date</label>
+                        <div>
+                            <label>Start Time</label>
                             <Input
-                                type="date"
-                                value={examForm.startDate}
-                                onChange={(e) => setExamForm({ ...examForm, startDate: e.target.value })}
+                                type="time"
+                                value={examForm.startTime}
+                                onChange={(e) =>
+                                    setExamForm({
+                                        ...examForm,
+                                        startTime: e.target.value,
+                                    })
+                                }
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold text-gray-700">End Date</label>
+
+                        <div>
+                            <label>End Time</label>
                             <Input
-                                type="date"
-                                value={examForm.endDate}
-                                onChange={(e) => setExamForm({ ...examForm, endDate: e.target.value })}
+                                type="time"
+                                value={examForm.endTime}
+                                onChange={(e) =>
+                                    setExamForm({
+                                        ...examForm,
+                                        endTime: e.target.value,
+                                    })
+                                }
                             />
                         </div>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <label className="text-xs font-semibold text-gray-700">
-                            Question Type
+                            Exam Format
                         </label>
 
-                        <div className="flex gap-6">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={examCategory === 'MCQS'}
-                                    onChange={() =>
-                                        setExamCategory(
-                                            examCategory === 'MCQS' ? '' : 'MCQS'
-                                        )
-                                    }
-                                />
-                                <span>MCQs</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={examCategory === 'WRITTEN'}
-                                    onChange={() =>
-                                        setExamCategory(
-                                            examCategory === 'WRITTEN' ? '' : 'WRITTEN'
-                                        )
-                                    }
-                                />
-                                <span>Written</span>
-                            </label>
-                        </div>
+                        <select
+                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                            value={examForm.examFormat}
+                            onChange={(e) =>
+                                setExamForm({
+                                    ...examForm,
+                                    examFormat: e.target.value,
+                                })
+                            }
+                        >
+                            <option value="">-- Select Format --</option>
+                            <option value="MCQ">MCQ</option>
+                            <option value="WRITTEN">WRITTEN</option>
+                        </select>
                     </div>
 
-                    {examCategory === 'MCQS' && (
+                    {examForm.examFormat === 'MCQ' && (
                         <>
-                            <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+                            <div className="space-y-3 p-4 border rounded-lg bg-gray-50 cursor-pointer">
                                 <label className="text-xs font-semibold text-gray-700">
                                     Upload Questions Excel File
                                 </label>
@@ -538,7 +715,7 @@ export function Exams() {
                 </div>
             </Drawer>
 
-
+            {/* Delete modal */}
             <Modal
                 isOpen={!!confirmDelete}
                 onClose={() => setConfirmDelete(null)}
