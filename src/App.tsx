@@ -13,6 +13,8 @@ import { DashboardPage } from './routes/DashboardPage';
 import { StudentsPage } from './routes/StudentsPage';
 import { ProfileRouter } from './routes/ProfileRoutePage';
 import { Events } from './routes/Events';
+import { Exams } from './routes/Exams';
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -35,6 +37,7 @@ function App() {
             <Route path="students" element={<StudentsPage />} />
             <Route path="profile" element={<ProfileRouter />} />
             <Route path="events" element={<Events />} />
+            <Route path="exams" element={<Exams />} />
           </Route>
         </Routes>
       </BrowserRouter>
