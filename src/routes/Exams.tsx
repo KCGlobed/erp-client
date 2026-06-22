@@ -430,111 +430,115 @@ export function Exams() {
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">
-                            Exam Type
-                        </label>
+                    <div className='grid grid-cols-2 gap-4'>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">
+                                Exam Type
+                            </label>
 
-                        <select
-                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
-                            value={examForm.type}
-                            onChange={(e) =>
-                                setExamForm({
-                                    ...examForm,
-                                    type: e.target.value,
-                                })
-                            }
-                        >
-                            <option value="">-- Select Exam Type --</option>
-                            <option value="MID_TERM">MID TERM</option>
-                            <option value="FINAL">FINAL</option>
-                            <option value="VIVA">VIVA</option>
-                            <option value="PRACTICAL">PRACTICAL</option>
-                            <option value="ASSIGNMENT">ASSIGNMENT</option>
-                        </select>
+                            <select
+                                className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                                value={examForm.type}
+                                onChange={(e) =>
+                                    setExamForm({
+                                        ...examForm,
+                                        type: e.target.value,
+                                    })
+                                }
+                            >
+                                <option value="">-- Select Exam Type --</option>
+                                <option value="MID_TERM">MID TERM</option>
+                                <option value="FINAL">FINAL</option>
+                                <option value="VIVA">VIVA</option>
+                                <option value="PRACTICAL">PRACTICAL</option>
+                                <option value="ASSIGNMENT">ASSIGNMENT</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">
+                                Select Cohort
+                            </label>
+
+                            <select
+                                className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                                value={examForm.cohortId}
+                                onChange={(e) =>
+                                    setExamForm({
+                                        ...examForm,
+                                        cohortId: e.target.value,
+                                        courseId: '',
+                                        subjectId: '',
+                                    })
+                                }
+                            >
+                                <option value="">-- Choose Cohort --</option>
+
+                                {cohorts.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">
-                            Select Cohort
-                        </label>
+                    <div className='grid grid-cols-2 gap-4'>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">
+                                Select Course
+                            </label>
 
-                        <select
-                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
-                            value={examForm.cohortId}
-                            onChange={(e) =>
-                                setExamForm({
-                                    ...examForm,
-                                    cohortId: e.target.value,
-                                    courseId: '',
-                                    subjectId: '',
-                                })
-                            }
-                        >
-                            <option value="">-- Choose Cohort --</option>
+                            <select
+                                className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                                value={examForm.courseId}
+                                disabled={!examForm.cohortId}
+                                onChange={(e) =>
+                                    setExamForm({
+                                        ...examForm,
+                                        courseId: e.target.value,
+                                        subjectId: '',
+                                    })
+                                }
+                            >
+                                <option value="">-- Choose Course --</option>
 
-                            {cohorts.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                                {selectedCohortCourses.map((cc: any) => (
+                                    <option
+                                        key={cc.course.id}
+                                        value={cc.course.id}
+                                    >
+                                        {cc.course.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">
-                            Select Course
-                        </label>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">
+                                Select Subject
+                            </label>
 
-                        <select
-                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
-                            value={examForm.courseId}
-                            disabled={!examForm.cohortId}
-                            onChange={(e) =>
-                                setExamForm({
-                                    ...examForm,
-                                    courseId: e.target.value,
-                                    subjectId: '',
-                                })
-                            }
-                        >
-                            <option value="">-- Choose Course --</option>
+                            <select
+                                className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
+                                value={examForm.subjectId}
+                                disabled={!examForm.courseId}
+                                onChange={(e) =>
+                                    setExamForm({
+                                        ...examForm,
+                                        subjectId: e.target.value,
+                                    })
+                                }
+                            >
+                                <option value="">-- Choose Subject --</option>
 
-                            {selectedCohortCourses.map((cc: any) => (
-                                <option
-                                    key={cc.course.id}
-                                    value={cc.course.id}
-                                >
-                                    {cc.course.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700">
-                            Select Subject
-                        </label>
-
-                        <select
-                            className="w-full p-2.5 border border-gray-300 rounded-md text-xs"
-                            value={examForm.subjectId}
-                            disabled={!examForm.courseId}
-                            onChange={(e) =>
-                                setExamForm({
-                                    ...examForm,
-                                    subjectId: e.target.value,
-                                })
-                            }
-                        >
-                            <option value="">-- Choose Subject --</option>
-
-                            {availableSubjects.map((s: any) => (
-                                <option key={s.id} value={s.id}>
-                                    {s.name} ({s.code})
-                                </option>
-                            ))}
-                        </select>
+                                {availableSubjects.map((s: any) => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.name} ({s.code})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <div className='grid grid-cols-2 gap-4'>

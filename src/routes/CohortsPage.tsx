@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Drawer } from '../components/ui/Drawer';
 import { Modal } from '../components/ui/Modal';
+import { DatePicker } from '../components/ui/DatePicker';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card';
 
 export function CohortsPage() {
@@ -307,13 +308,12 @@ export function CohortsPage() {
                       {startStr} – {endStr}
                     </span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        cohort.status === 'ACTIVE'
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${cohort.status === 'ACTIVE'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : cohort.status === 'PLANNING'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-gray-100 text-gray-700 border border-gray-250'
-                      }`}
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-gray-100 text-gray-700 border border-gray-250'
+                        }`}
                     >
                       {cohort.status}
                     </span>
@@ -489,18 +489,16 @@ export function CohortsPage() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Start Date</label>
-            <Input
-              type="date"
+            <DatePicker
               value={cohortForm.startDate}
-              onChange={(e) => setCohortForm({ ...cohortForm, startDate: e.target.value })}
+              onChange={(val) => setCohortForm({ ...cohortForm, startDate: val })}
             />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">End Date</label>
-            <Input
-              type="date"
+            <DatePicker
               value={cohortForm.endDate}
-              onChange={(e) => setCohortForm({ ...cohortForm, endDate: e.target.value })}
+              onChange={(val) => setCohortForm({ ...cohortForm, endDate: val })}
             />
           </div>
           <div className="space-y-2">

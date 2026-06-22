@@ -426,7 +426,6 @@ export function TimetablePage() {
                 gridTemplateRows: 'auto 380px',
               }}
             >
-              {/* Header Columns 1-24: Hour Headers */}
               {hours.map((hr, hrIdx) => {
                 const hourEvents = getEventsStartingInHour(hr);
 
