@@ -9,6 +9,9 @@ import { Drawer } from '../components/ui/Drawer';
 import { Modal } from '../components/ui/Modal';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
 import Skeleton from '../components/ui/skeleton';
+import { FileUpload } from '../components/ui/UploadFile';
+import { TimePicker } from '../components/ui/TimePicker';
+import { DatePicker } from '../components/ui/DatePicker';
 
 export function Exams() {
     const { user } = useAuthStore();
@@ -20,7 +23,6 @@ export function Exams() {
     const [editingExam, setEditingExam] = useState<any>(null);
 
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-    // const [examCategory, setExamCategory] = useState('');
     const [excelFile, setExcelFile] = useState<File | null>(null);
 
     // Form states for Exam
@@ -560,36 +562,33 @@ export function Exams() {
                     </div>
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-gray-700">Exam Date</label>
-                        <Input
-                            type='date'
+                        <DatePicker
                             value={examForm.date}
-                            onChange={(e) => setExamForm({ ...examForm, date: e.target.value })}
+                            onChange={(val) => setExamForm({ ...examForm, date: val })}
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label>Start Time</label>
-                            <Input
-                                type="time"
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">Start Time</label>
+                            <TimePicker
                                 value={examForm.startTime}
-                                onChange={(e) =>
+                                onChange={(val) =>
                                     setExamForm({
                                         ...examForm,
-                                        startTime: e.target.value,
+                                        startTime: val,
                                     })
                                 }
                             />
                         </div>
 
-                        <div>
-                            <label>End Time</label>
-                            <Input
-                                type="time"
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-700">End Time</label>
+                            <TimePicker
                                 value={examForm.endTime}
-                                onChange={(e) =>
+                                onChange={(val) =>
                                     setExamForm({
                                         ...examForm,
-                                        endTime: e.target.value,
+                                        endTime: val,
                                     })
                                 }
                             />
@@ -617,43 +616,12 @@ export function Exams() {
                     </div>
 
                     {examForm.examFormat === 'MCQ' && (
-                        <>
-                            <div className="space-y-3 p-4 border rounded-lg bg-gray-50 cursor-pointer">
-                                <label className="text-xs font-semibold text-gray-700">
-                                    Upload Questions Excel File
-                                </label>
-
-                                <input
-                                    type="file"
-                                    accept=".xlsx,.xls"
-                                    onChange={(e) =>
-                                        setExcelFile(e.target.files?.[0] || null)
-                                    }
-                                    className="w-full text-sm"
-                                />
-
-                                {excelFile && (
-                                    <p className="text-xs text-green-600">
-                                        Selected: {excelFile.name}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        const link = document.createElement('a');
-                                        link.href = '/sample_excel_file.xlsx';
-                                        link.download = 'sample_excel_file.xlsx';
-                                        link.click();
-                                    }}
-                                >
-                                    Download Sample
-                                </Button>
-                            </div>
-                        </>
+                        <FileUpload
+                            label="Upload Questions Excel File"
+                            file={excelFile}
+                            accept=".xlsx,.xls"
+                            onChange={setExcelFile}
+                        />
                     )}
 
                     {/* Target filters */}
