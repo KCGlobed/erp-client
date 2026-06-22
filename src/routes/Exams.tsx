@@ -62,10 +62,10 @@ export function Exams() {
         queryFn: () => apiFetch('/calendar/exams'),
     });
 
-    const { data: cohorts = [] } = useQuery<any[]>({
-        queryKey: ['cohorts'],
-        queryFn: () => apiFetch('/cohorts'),
-    });
+    // const { data: cohorts = [] } = useQuery<any[]>({
+    //     queryKey: ['cohorts'],
+    //     queryFn: () => apiFetch('/cohorts'),
+    // });
 
     // Mutations
     const createExams = useMutation({
