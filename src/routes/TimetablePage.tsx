@@ -406,7 +406,11 @@ export function TimetablePage() {
         {holidays.length > 0 && (
           <div className="bg-rose-50 border-b border-rose-100 p-4 space-y-2">
             {holidays.map((h, hIdx) => (
-              <div key={hIdx} className="flex flex-col items-start justify-center text-xs font-bold text-rose-700">
+              <div
+                key={hIdx}
+                onClick={() => handleDayClick(currentDate)}
+                className="flex flex-col items-start justify-center text-xs font-bold text-rose-700 cursor-pointer hover:opacity-80 transition-opacity"
+              >
                 <span className="block mb-0.5 text-[9px] text-rose-400 uppercase tracking-widest font-extrabold">holiday</span>
                 <span className="leading-snug text-sm">{h.name}</span>
               </div>
@@ -478,6 +482,7 @@ export function TimetablePage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedTimelineEvent(ev);
+                              handleDayClick(currentDate);
                             }}
                             className={`text-[10px] font-medium leading-tight px-2 py-1 rounded border-l-4 cursor-pointer hover:opacity-80 transition-all inline-block whitespace-nowrap w-max ${colorClass} ${isSelected ? 'ring-2 ring-[var(--primary)]' : ''
                               }`}
