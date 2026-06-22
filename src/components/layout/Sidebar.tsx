@@ -77,7 +77,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { title: "Courses", url: "/courses", icon: BookOpen },
         { title: "Cohorts", url: "/cohorts", icon: GraduationCap, reqRoles: ['SUPER_ADMIN', 'ADMIN'] },
         // { title: "Attendance", url: "/attendance", icon: ClipboardList, reqRoles: ['FACULTY'] },
-        // { title: "Exams", url: "/exams", icon: FileText },
+        { title: "Exams", url: "/exams", icon: FileText, reqRoles: ['SUPER_ADMIN', 'ADMIN', 'FACULTY'] },
         { title: "Timetable", url: "/timetable", icon: CalendarDays },
         { title: "Events", url: "/events", icon: CalendarDays, reqRoles: ['SUPER_ADMIN']}
       ],
