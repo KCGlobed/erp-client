@@ -12,6 +12,7 @@ import Skeleton from '../components/ui/skeleton';
 import { FileUpload } from '../components/ui/UploadFile';
 import { TimePicker } from '../components/ui/TimePicker';
 import { DatePicker } from '../components/ui/DatePicker';
+import { InfoTooltip } from '../components/ui/infotooltip';
 
 export function Exams() {
     const { user } = useAuthStore();
@@ -631,19 +632,33 @@ export function Exams() {
                                     Download Sample File
                                 </a>
                             </div>
-                            
 
-                            <FileUpload
-                                label="Upload Questions Excel File"
-                                file={excelFile}
-                                accept=".xlsx,.xls"
-                                onChange={setExcelFile}
-                            />
+
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-semibold text-gray-700">
+                                        Upload Questions Excel File
+                                    </label>
+
+                                    <InfoTooltip
+                                    className=''
+                                        message={
+                                            <> <div className='relative top-0 left-0'>Upload the file in the format provided in the sample file.</div></>
+                                        }
+                                    />
+                                </div>
+
+                                <FileUpload
+                                    file={excelFile}
+                                    accept=".xlsx,.xls"
+                                    onChange={setExcelFile}
+                                />
+                            </div>
                         </div>
                     )}
 
-                            {/* Target filters */}
-                            {/* <div className="space-y-2 bg-gray-50 p-3 rounded border border-gray-150">
+                    {/* Target filters */}
+                    {/* <div className="space-y-2 bg-gray-50 p-3 rounded border border-gray-150">
                         <span className="text-[10px] font-bold text-gray-400 block mb-1">AUDIENCE TARGET FILTERS (LEAVE EMPTY FOR GLOBAL)</span>
                         <div className="space-y-3 mt-2 text-xs">
                             <div className="space-y-1">
@@ -692,13 +707,13 @@ export function Exams() {
                             </div>
                         </div>
                     </div> */}
-                            <div className="flex justify-end gap-2 pt-4">
-                                <Button variant="outline" onClick={closeExamsDrawer}>Cancel</Button>
-                                <Button onClick={handleExamsSubmit} disabled={createExams.isPending || updateExams.isPending}>
-                                    {createExams.isPending || updateExams.isPending ? 'Saving...' : 'Save Exam'}
-                                </Button>
-                            </div>
-                        </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={closeExamsDrawer}>Cancel</Button>
+                        <Button onClick={handleExamsSubmit} disabled={createExams.isPending || updateExams.isPending}>
+                            {createExams.isPending || updateExams.isPending ? 'Saving...' : 'Save Exam'}
+                        </Button>
+                    </div>
+                </div>
             </Drawer>
 
             {/* Delete modal */}
