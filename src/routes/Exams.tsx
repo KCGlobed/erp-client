@@ -620,16 +620,30 @@ export function Exams() {
                     </div>
 
                     {examForm.examFormat === 'MCQ' && (
-                        <FileUpload
-                            label="Upload Questions Excel File"
-                            file={excelFile}
-                            accept=".xlsx,.xls"
-                            onChange={setExcelFile}
-                        />
+
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <a
+                                    href="/sample-files/mcq-sample.xlsx"
+                                    download
+                                    className="text-xs border p-2 px-4 rounded hover:cursor-pointer hover:bg-gray-100"
+                                >
+                                    Download Sample File
+                                </a>
+                            </div>
+                            
+
+                            <FileUpload
+                                label="Upload Questions Excel File"
+                                file={excelFile}
+                                accept=".xlsx,.xls"
+                                onChange={setExcelFile}
+                            />
+                        </div>
                     )}
 
-                    {/* Target filters */}
-                    {/* <div className="space-y-2 bg-gray-50 p-3 rounded border border-gray-150">
+                            {/* Target filters */}
+                            {/* <div className="space-y-2 bg-gray-50 p-3 rounded border border-gray-150">
                         <span className="text-[10px] font-bold text-gray-400 block mb-1">AUDIENCE TARGET FILTERS (LEAVE EMPTY FOR GLOBAL)</span>
                         <div className="space-y-3 mt-2 text-xs">
                             <div className="space-y-1">
@@ -678,13 +692,13 @@ export function Exams() {
                             </div>
                         </div>
                     </div> */}
-                    <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={closeExamsDrawer}>Cancel</Button>
-                        <Button onClick={handleExamsSubmit} disabled={createExams.isPending || updateExams.isPending}>
-                            {createExams.isPending || updateExams.isPending ? 'Saving...' : 'Save Exam'}
-                        </Button>
-                    </div>
-                </div>
+                            <div className="flex justify-end gap-2 pt-4">
+                                <Button variant="outline" onClick={closeExamsDrawer}>Cancel</Button>
+                                <Button onClick={handleExamsSubmit} disabled={createExams.isPending || updateExams.isPending}>
+                                    {createExams.isPending || updateExams.isPending ? 'Saving...' : 'Save Exam'}
+                                </Button>
+                            </div>
+                        </div>
             </Drawer>
 
             {/* Delete modal */}

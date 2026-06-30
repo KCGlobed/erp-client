@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Bell, Search, Menu,
   LayoutDashboard, GraduationCap, BookOpen, 
   ClipboardList, CalendarDays, Wallet, Settings, 
-  Users, Shield, FileText, UserCircle 
+  Users, Shield, FileText, UserCircle, User 
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { apiFetch } from '../../lib/api';
 import { Sidebar } from './Sidebar';
 
 const SEARCHABLE_ROUTES = [
@@ -48,6 +50,25 @@ export function DashboardLayout() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const [imageError, setImageError] = useState(false);
+
+  const isStudent = user?.roles?.includes('STUDENT');
+  const queryKey = isStudent ? ['student-profile'] : ['faculty-profile'];
+  const endpoint = isStudent ? '/student-profile/me' : '/faculty-profile/me';
+
+  const { data: profileData } = useQuery({
+    queryKey,
+    queryFn: () => apiFetch(endpoint),
+    enabled: !!accessToken && !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const profilePhotoUrl = profileData?.profilePhotoUrl;
+
+  useEffect(() => {
+    setImageError(false);
+  }, [profilePhotoUrl]);
 
   if (!accessToken) {
     return <Navigate to="/login" replace />;
@@ -237,19 +258,28 @@ export function DashboardLayout() {
 
             {/* User profile */}
             <div
-            onClick={() => navigate('/profile')}
-              className="hidden md:flex items-center gap-2 pl-3 cursor-pointer"
+              onClick={() => navigate('/profile')}
+              className="hidden md:flex items-center gap-2 pl-3 cursor-pointer select-none"
               style={{ borderLeft: '1px solid var(--border)' }}
             >
-              <div
-                className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold"
-                style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
-              >
-                {initials}
+              <div className="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-semibold shrink-0 bg-neutral-100 border border-neutral-200">
+                {profilePhotoUrl && !imageError ? (
+                  <img
+                    src={profilePhotoUrl}
+                    alt={`${user?.firstName} ${user?.lastName}`}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center font-bold"
+                    style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                  >
+                    {initials || <User className="h-4 w-4" />}
+                  </div>
+                )}
               </div>
-              <div
-              
-              className="leading-tight">
+              <div className="leading-tight">
                 <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
                   {user?.firstName} {user?.lastName}
                 </div>
