@@ -50,6 +50,7 @@ export function FacultyProfilePage() {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
+  const [imageError, setImageError] = useState(false);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -69,6 +70,10 @@ export function FacultyProfilePage() {
     dateOfJoining: '',
     experience: [] as ExperienceItem[],
   });
+
+  useEffect(() => {
+    setImageError(false);
+  }, [form.profilePhotoUrl]);
 
   const addExperience = () => {
     setForm((prev) => ({
@@ -354,9 +359,10 @@ export function FacultyProfilePage() {
   };
 
   const fullName = [form.firstName, form.middleName, form.lastName].filter(Boolean).join(' ');
-  const avatar =
-    form.profilePhotoUrl ||
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${form.firstName}_${form.lastName}`;
+  const initials = [form.firstName, form.lastName]
+    .map(name => name ? name.trim().charAt(0).toUpperCase() : '')
+    .filter(Boolean)
+    .join('');
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -619,12 +625,22 @@ export function FacultyProfilePage() {
               <CardContent className="px-6 pb-6 pt-0">
                 <div className="flex flex-col md:flex-row items-center md:items-end gap-6 mt-2 relative z-10">
                   {/* Avatar section */}
-                  <div className="relative w-24 h-24 shrink-0 rounded-full bg-white overflow-hidden group border-4 border-white shadow-md">
-                    <img
-                      src={avatar}
-                      alt={fullName}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="relative w-24 h-24 shrink-0 rounded-full bg-neutral-100 overflow-hidden group border-4 border-white shadow-md flex items-center justify-center">
+                    {form.profilePhotoUrl && !imageError ? (
+                      <img
+                        src={form.profilePhotoUrl}
+                        alt={fullName}
+                        className="w-full h-full object-cover"
+                        onError={() => setImageError(true)}
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center font-bold text-2xl select-none"
+                        style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                      >
+                        {initials || <User className="h-8 w-8 text-neutral-400" />}
+                      </div>
+                    )}
 
                     <button
                       type="button"

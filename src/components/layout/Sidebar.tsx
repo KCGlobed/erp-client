@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,10 +14,13 @@ import {
   Shield,
   ChevronDown,
   UserCircle,
+  User
 } from "lucide-react";
+import { useQuery } from '@tanstack/react-query';
 import type { LucideIcon } from "lucide-react";
 import { useAuthStore } from '../../store/useAuthStore';
 import { cn } from '../ui/Button';
+import { apiFetch } from '../../lib/api';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -37,7 +40,22 @@ interface NavGroup {
 }
 
 export function Sidebar({ collapsed }: SidebarProps) {
-  const { user, clearAuth } = useAuthStore();
+  const { user, clearAuth, accessToken } = useAuthStore();
+  const [imageError, setImageError] = useState(false);
+  const isStudent = user?.roles?.includes('STUDENT');
+  const queryKey = isStudent ? ['student-profile'] : ['faculty-profile'];
+  const endpoint = isStudent ? '/student-profile/me' : '/faculty-profile/me';
+  const { data: profileData } = useQuery({
+    queryKey,
+    queryFn: () => apiFetch(endpoint),
+    enabled: !!accessToken && !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+  const profilePhotoUrl = profileData?.profilePhotoUrl;
+  useEffect(() => {
+    setImageError(false);
+  }, [profilePhotoUrl]);
+
   const location = useLocation();
   const Navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -79,7 +97,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         // { title: "Attendance", url: "/attendance", icon: ClipboardList, reqRoles: ['FACULTY'] },
         { title: "Exams", url: "/exams", icon: FileText, reqRoles: ['SUPER_ADMIN', 'ADMIN', 'FACULTY'] },
         { title: "Timetable", url: "/timetable", icon: CalendarDays },
-        { title: "Events", url: "/events", icon: CalendarDays, reqRoles: ['SUPER_ADMIN']}
+        { title: "Events", url: "/events", icon: CalendarDays, reqRoles: ['SUPER_ADMIN'] }
       ],
     },
     // {
@@ -217,11 +235,22 @@ export function Sidebar({ collapsed }: SidebarProps) {
       >
         {!collapsed ? (
           <div className="flex w-full items-center gap-3">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-              style={{ backgroundColor: 'var(--sidebar-accent)', color: 'var(--sidebar-accent-foreground)' }}
-            >
-              {initials}
+            <div className="h-8 w-8 shrink-0 rounded-full overflow-hidden flex items-center justify-center text-xs font-semibold bg-neutral-100 border border-neutral-200">
+              {profilePhotoUrl && !imageError ? (
+                <img
+                  src={profilePhotoUrl}
+                  alt={`${user?.firstName} ${user?.lastName}`}
+                  className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center font-bold"
+                  style={{ backgroundColor: 'var(--sidebar-accent)', color: 'var(--sidebar-accent-foreground)' }}
+                >
+                  {initials || <User className="h-4 w-4" />}
+                </div>
+              )}
             </div>
             <div className="flex flex-col flex-1 leading-tight overflow-hidden">
               <span className="text-xs font-medium truncate" style={{ color: 'var(--sidebar-foreground)' }}>

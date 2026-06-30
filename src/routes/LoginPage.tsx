@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { LogIn, ArrowLeft, Mail, Key, ShieldCheck } from 'lucide-react';
+import { LogIn, ArrowLeft, Mail, Key, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { apiFetch } from '../lib/api';
 import { Input } from '../components/ui/Input';
@@ -17,6 +17,11 @@ export function LoginPage() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Notification states
   const [error, setError] = useState('');
@@ -128,6 +133,9 @@ export function LoginPage() {
       setNewPassword('');
       setConfirmPassword('');
       setOtp('');
+      setShowPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (err: any) {
       setError(err.message || 'Failed to reset password');
     } finally {
@@ -139,6 +147,9 @@ export function LoginPage() {
     setError('');
     setSuccess('');
     setMode(newMode);
+    setShowPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   return (
@@ -221,8 +232,17 @@ export function LoginPage() {
             <div>
               <Input
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
+                suffix={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-muted-foreground hover:text-foreground p-2 rounded-md"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                }
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -330,8 +350,17 @@ export function LoginPage() {
           <form onSubmit={handleResetSubmit} className="space-y-4">
             <Input
               label="New Password"
-              type="password"
+              type={showNewPassword ? 'text' : 'password'}
               placeholder="••••••••"
+              suffix={
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="text-muted-foreground hover:text-foreground p-2 rounded-md"
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
@@ -339,8 +368,17 @@ export function LoginPage() {
 
             <Input
               label="Confirm New Password"
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               placeholder="••••••••"
+              suffix={
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="text-muted-foreground hover:text-foreground p-2 rounded-md"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
