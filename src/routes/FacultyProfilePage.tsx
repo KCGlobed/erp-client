@@ -52,6 +52,20 @@ export function FacultyProfilePage() {
   const [employmentStatus, setEmploymentStatus] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
   const [imageError, setImageError] = useState(false);
 
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOldPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+    setPasswordSuccess(null);
+  }, [activeTab]);
+
   const [form, setForm] = useState({
     firstName: '',
     middleName: '',
@@ -437,6 +451,49 @@ export function FacultyProfilePage() {
 
     uploadBannerMutation.mutate(file);
   };
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async () => {
+      setPasswordError(null);
+      setPasswordSuccess(null);
+
+      if (!oldPassword) {
+        throw new Error('Current password is required');
+      }
+      if (!newPassword) {
+        throw new Error('New password is required');
+      }
+      if (newPassword.length < 8) {
+        throw new Error('New password must be at least 8 characters long');
+      }
+      if (newPassword !== confirmPassword) {
+        throw new Error('New passwords do not match');
+      }
+
+      return apiFetch('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          oldPassword,
+          newPassword,
+        }),
+      });
+    },
+    onSuccess: () => {
+      setPasswordSuccess('Password updated successfully!');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPasswordSuccess(null), 5000);
+    },
+    onError: (err: any) => {
+      setPasswordError(err.message || 'Failed to update password');
+    },
+  });
+
+  const handleChangePassword = () => {
+    changePasswordMutation.mutate();
+  };
+
 
   return (
     <div className="max-w-8xl mx-auto font-sans">
@@ -1244,6 +1301,18 @@ export function FacultyProfilePage() {
                         defaultValue={authUser?.email || ''}
                       />
 
+                      {passwordSuccess && (
+                        <div className="text-sm font-semibold text-green-600 flex items-center gap-1.5 bg-green-50 px-3 py-2.5 rounded-lg border border-green-100 animate-fade-in">
+                          <Check className="h-4 w-4" /> {passwordSuccess}
+                        </div>
+                      )}
+
+                      {passwordError && (
+                        <div className="text-sm font-semibold text-red-600 flex items-center gap-1.5 bg-red-50 px-3 py-2.5 rounded-lg border border-red-100 animate-fade-in">
+                          <AlertCircle className="h-4 w-4" /> {passwordError}
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                         <div className="flex flex-col gap-1.5">
@@ -1254,6 +1323,11 @@ export function FacultyProfilePage() {
                             type="password"
                             placeholder="••••••••"
                             autoComplete="current-password"
+                            value={oldPassword}
+                            onChange={(e) => {
+                              setOldPassword(e.target.value);
+                              if (passwordError) setPasswordError(null);
+                            }}
                             className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                           />
                         </div>
@@ -1266,6 +1340,11 @@ export function FacultyProfilePage() {
                             type="password"
                             placeholder="At least 8 characters"
                             autoComplete="new-password"
+                            value={newPassword}
+                            onChange={(e) => {
+                              setNewPassword(e.target.value);
+                              if (passwordError) setPasswordError(null);
+                            }}
                             className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                           />
                         </div>
@@ -1278,6 +1357,11 @@ export function FacultyProfilePage() {
                             type="password"
                             placeholder="Re-enter new password"
                             autoComplete="new-password"
+                            value={confirmPassword}
+                            onChange={(e) => {
+                              setConfirmPassword(e.target.value);
+                              if (passwordError) setPasswordError(null);
+                            }}
                             className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm font-medium outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                           />
                         </div>
@@ -1286,11 +1370,13 @@ export function FacultyProfilePage() {
 
                       <div className="flex justify-end pt-2">
                         <button
+                          onClick={handleChangePassword}
+                          disabled={changePasswordMutation.isPending}
                           type="button"
-                          className="h-9 px-5 rounded-lg text-xs font-semibold text-white transition-all shadow-sm cursor-pointer hover:opacity-95"
+                          className="h-9 px-5 rounded-lg text-xs font-semibold text-white transition-all shadow-sm cursor-pointer hover:opacity-95 disabled:opacity-50"
                           style={{ backgroundColor: 'rgb(88, 5, 85)' }}
                         >
-                          Update Password
+                          {changePasswordMutation.isPending ? 'Updating...' : 'Update Password'}
                         </button>
                       </div>
 
