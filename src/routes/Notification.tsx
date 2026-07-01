@@ -10,6 +10,83 @@ import { Modal } from '../components/ui/Modal';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card';
 import Skeleton from '../components/ui/skeleton';
 
+interface MultiSelectDropdownProps {
+  label: string;
+  options: { id: string; name: string }[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  placeholder?: string;
+  openUpward?: boolean;
+}
+
+function MultiSelectDropdown({ label, options, selected, onChange, placeholder = "Select...", openUpward = false }: MultiSelectDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleOption = (id: string) => {
+    if (selected.includes(id)) {
+      onChange(selected.filter(x => x !== id));
+    } else {
+      onChange([...selected, id]);
+    }
+  };
+
+  const selectedNames = options
+    .filter(opt => selected.includes(opt.id))
+    .map(opt => opt.name)
+    .join(', ');
+
+  return (
+    <div className="space-y-1.5 relative">
+      <label className="text-xs font-semibold text-gray-700">{label}</label>
+      <div>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full h-10 px-3 flex items-center justify-between border border-gray-300 rounded-md bg-white text-xs text-left shadow-sm hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-[var(--primary)] cursor-pointer"
+        >
+          <span className="truncate text-gray-700">
+            {selected.length > 0 ? selectedNames : placeholder}
+          </span>
+          <span className="text-gray-400 ml-2 text-[8px]">▼</span>
+        </button>
+      </div>
+
+      {isOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => setIsOpen(false)} 
+          />
+          <div className={`absolute left-0 right-0 max-h-48 overflow-y-auto border border-gray-200 rounded-md bg-white shadow-lg z-25 p-1 space-y-0.5 ${
+            openUpward ? 'bottom-full mb-1' : 'mt-1'
+          }`}>
+            {options.map((opt) => {
+              const isChecked = selected.includes(opt.id);
+              return (
+                <label
+                  key={opt.id}
+                  className="flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleOption(opt.id)}
+                    className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)] h-3.5 w-3.5"
+                  />
+                  <span className="text-gray-750 font-medium">{opt.name}</span>
+                </label>
+              );
+            })}
+            {options.length === 0 && (
+              <div className="p-3 text-center text-xs text-gray-400">No options available</div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Notification() {
     const { user } = useAuthStore();
     const queryClient = useQueryClient();
@@ -343,7 +420,7 @@ export function Notification() {
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 pb-5">
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-gray-700">Notification Title</label>
                         <Input
@@ -390,85 +467,36 @@ export function Notification() {
                         <div className="space-y-4 bg-gray-50/50 p-3 rounded-lg border border-gray-150">
                             <span className="text-[10px] font-bold text-gray-400 block mb-1">AUDIENCE TARGET FILTERS</span>
                             
-                            {/* Roles targeting */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-700">Target Roles</label>
-                                <div className="flex flex-wrap gap-3 p-2 bg-white border border-gray-200 rounded">
-                                    {['SUPER_ADMIN', 'ADMIN', 'FACULTY', 'STUDENT'].map((role) => (
-                                        <label key={role} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={notificationForm.targetRoles.includes(role)}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setNotificationForm(prev => ({
-                                                        ...prev,
-                                                        targetRoles: checked 
-                                                            ? [...prev.targetRoles, role] 
-                                                            : prev.targetRoles.filter(r => r !== role)
-                                                    }));
-                                                }}
-                                                className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                                            />
-                                            <span>{role.replace('_', ' ')}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
+                            <MultiSelectDropdown
+                                label="Target Roles"
+                                options={[
+                                    { id: 'SUPER_ADMIN', name: 'SUPER ADMIN' },
+                                    { id: 'ADMIN', name: 'ADMIN' },
+                                    { id: 'FACULTY', name: 'FACULTY' },
+                                    { id: 'STUDENT', name: 'STUDENT' }
+                                ]}
+                                selected={notificationForm.targetRoles}
+                                onChange={(selected) => setNotificationForm(prev => ({ ...prev, targetRoles: selected }))}
+                                placeholder="Select target roles..."
+                            />
 
-                            {/* Cohorts targeting */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-700">Target Cohorts</label>
-                                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded bg-white p-2 space-y-1">
-                                    {cohorts.map((c) => (
-                                        <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                            <input
-                                                type="checkbox"
-                                                checked={notificationForm.cohortIds.includes(c.id)}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setNotificationForm(prev => ({
-                                                        ...prev,
-                                                        cohortIds: checked 
-                                                            ? [...prev.cohortIds, c.id] 
-                                                            : prev.cohortIds.filter(id => id !== c.id)
-                                                    }));
-                                                }}
-                                                className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                                            />
-                                            <span>{c.name}</span>
-                                        </label>
-                                    ))}
-                                    {cohorts.length === 0 && <div className="text-xs text-gray-400 p-1">No cohorts found</div>}
-                                </div>
-                            </div>
+                            <MultiSelectDropdown
+                                label="Target Cohorts"
+                                options={cohorts.map((c) => ({ id: c.id, name: c.name }))}
+                                selected={notificationForm.cohortIds}
+                                onChange={(selected) => setNotificationForm(prev => ({ ...prev, cohortIds: selected }))}
+                                placeholder="Select target cohorts..."
+                                openUpward={true}
+                            />
 
-                            {/* Courses targeting */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-700">Target Courses</label>
-                                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded bg-white p-2 space-y-1">
-                                    {courses.map((c) => (
-                                        <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                            <input
-                                                type="checkbox"
-                                                checked={notificationForm.courseIds.includes(c.id)}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setNotificationForm(prev => ({
-                                                        ...prev,
-                                                        courseIds: checked 
-                                                            ? [...prev.courseIds, c.id] 
-                                                            : prev.courseIds.filter(id => id !== c.id)
-                                                    }));
-                                                }}
-                                                className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                                            />
-                                            <span>{c.name}</span>
-                                        </label>
-                                    ))}
-                                    {courses.length === 0 && <div className="text-xs text-gray-400 p-1">No courses found</div>}
-                                </div>
-                            </div>
+                            <MultiSelectDropdown
+                                label="Target Courses"
+                                options={courses.map((c) => ({ id: c.id, name: c.name }))}
+                                selected={notificationForm.courseIds}
+                                onChange={(selected) => setNotificationForm(prev => ({ ...prev, courseIds: selected }))}
+                                placeholder="Select target courses..."
+                                openUpward={true}
+                            />
                         </div>
                     )}
 
