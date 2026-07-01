@@ -14,7 +14,8 @@ import {
   Shield,
   ChevronDown,
   UserCircle,
-  User
+  User,
+  Bell
 } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import type { LucideIcon } from "lucide-react";
@@ -97,7 +98,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
         // { title: "Attendance", url: "/attendance", icon: ClipboardList, reqRoles: ['FACULTY'] },
         { title: "Exams", url: "/exams", icon: FileText, reqRoles: ['SUPER_ADMIN', 'ADMIN', 'FACULTY'] },
         { title: "Timetable", url: "/timetable", icon: CalendarDays },
-        { title: "Events", url: "/events", icon: CalendarDays, reqRoles: ['SUPER_ADMIN'] }
+        { title: "Events", url: "/events", icon: CalendarDays, reqRoles: ['SUPER_ADMIN'] },
+        { title: "Notification", url: "/notifications", icon: Bell, reqRoles: ['SUPER_ADMIN', 'ADMIN'] }
       ],
     },
     // {
